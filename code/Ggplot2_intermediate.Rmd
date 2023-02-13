@@ -1,0 +1,942 @@
+---
+title: "GGplot2 workflow"
+author: "Nina Dombrowski"
+affiliation: "NIOZ"
+date: "`r Sys.Date()`"
+knit: (function(input_file, encoding) {out_dir <- 'docs';rmarkdown::render(input_file,encoding=encoding, output_file=file.path(dirname(input_file), out_dir, 'ggplot2_intermediate.html'))})
+output:
+  rmdformats::readthedown:
+    highlight: kate
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r knitr setup, include=FALSE,  eval=TRUE, echo=FALSE, warning=FALSE}
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(fig.width=5, fig.height=3) 
+knitr::opts_chunk$set(eval=TRUE, cache=FALSE, message=FALSE, warning=FALSE, 
+                      comment = "", results="markup")
+#https://bookdown.org/yihui/rmarkdown/html-document.html
+#install.packages('knitr', ependencies = TRUE)
+#install.packages("devtools", lib="~/R/lib")
+#library(DT)
+#devtools::session_info()
+```
+
+This workflow provides some more input in how to generate graphs with ggplot2. In order to follow this tutorial, you should have done the introductory tutorial first.
+
+# Introduction
+
+This tutorial will introduce the some more aspects of ggplot. Please notice, that there can be some overlap with other tutorials.
+
+Statistics will be calculated on the fly and you’ll see how Coordinates and Facets aid in communication. You’ll also explore details of data visualization best practices with ggplot2 to help make sure you have a sound understanding of what works and why. 
+
+# Prepare workbook
+
+```{r}
+
+#set wdir (change to wherever you downloaded the folder)
+wdir <- "~/Desktop/WorkingDir/Notebooks/R_exercises/Ggplot2/"
+setwd(wdir)
+
+#to work with the penguin dataset, we first need to install it (remove the hash)
+#remotes::install_github("allisonhorst/palmerpenguins")
+
+#load packages
+library(dplyr)      #tools for transforming data
+library(tidyr)      #tools for transforming data
+library(ggplot2)    #tool for plotting
+library(palmerpenguins)
+
+```
+
+# Our datasets 
+
+For this we will work with several datasets.
+
+1. palmerpenguins, a data set that records details of 344 penguins.
+2.beaver dataset. Time series data that describes a small part of a study of the long-term temperature dynamics of beaver Castor canadensis in north-central Wisconsin. Body temperature was measured by telemetry every 10 minutes for four females, but data from a one period of less than a day for each of two animals is used there.
+3. A fish data set, that records different captured fish species over several years.
+4. mtcars = The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models).
+4. Mammals sleep data: contains the sleep times and weights for a set of mammals and is available in the dagdata repository on github. This data set contains 83 rows and 11 variables.
+
+
+The reason for providing these several datasets is that it allows you to visualize different types of data and practice with different examples.
+
+**Default exerise: Try what you have learned on one of the other datasets**
+
+```{r}
+
+#load a dataset (the rest is installed with R by default)
+load("ExampleData/fish.RData")
+data(msleep)
+
+#view the data we work with
+kable(head(penguins), format='markdown')
+kable(head(beaver1), format='markdown')
+kable(head(fish.tidy), format='markdown')
+kable(head(mtcars), format='markdown')
+kable(head(msleep), format='markdown')
+
+#check how the data is stored
+str(mtcars)
+
+```
+
+The penguin dataset has two rows with missing data, to avoid issues we will remove these rows for now.
+
+```{r}
+
+penguins_clean <- na.omit(penguins)
+
+```
+
+# Stats with geoms
+
+The statistics layer has two categories of functions:
+
+- the ones called from within a geom
+- the ones that are called independently
+
+Statistical functions beginn with ``stats_`` .
+
+Actually, when generating a histogram, the histrogram biom calls a stats function (called stat = "bin") under the hood.
+
+```{r}
+
+ggplot(penguins_clean, aes(x =body_mass_g )) + 
+  geom_histogram()
+
+```
+
+Similarly, geom_bar runs ``stat_count()`` under the hood. I.e. these two give the same plot.
+
+```{r}
+
+ggplot(penguins_clean, aes(x =species, fill = sex )) + 
+  geom_bar()
+
+ggplot(penguins_clean, aes(x =species, fill = sex )) + 
+  stat_count()
+
+```
+
+## stat_smooth()
+
+staat_smooth can be accessed with geom_smooth.
+
+```{r}
+
+ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g, color = species )) + 
+  geom_point() +
+  geom_smooth()
+
+```
+
+We can easily modify this. I.e. we can remove the grey line, which represents the 95% confidence interval byd default
+
+```{r}
+
+ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g, color = species )) + 
+  geom_point() +
+  geom_smooth(se = FALSE)
+
+```
+
+We also see in the warning message, that by default this function uses loess as a method to draw the line with formulate y dependent on x. Loess is a non-parametric smoothing algorithm that usually is used when we have less than 1000 observations. It works by calculating a weighted mean by passing a sliding window along the x-axis and is a valuable tool in exploratory data analysis.
+
+The ``span`` argument controls the degree of smoothing, i.e. the size of the sliding window. Generally, smaller spans will be more noisy, as we can see below.
+
+```{r}
+
+ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g, color = species )) + 
+  geom_point() +
+  geom_smooth(se = FALSE, span = 0.4)
+
+```
+
+We can also use parametric models, such as lm. Other options can be found by using the help function with geom_smooth. If we have more than 1000 observations the default goes from loess to glm.
+
+
+```{r}
+
+ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g, color = species )) + 
+  geom_point() +
+  geom_smooth(se = FALSE, method = "lm")
+
+```
+
+Notice, for all methods the line is calculated on groups defined by color.
+
+By default, each model is bound to the values of its own group. We can change this by defining the ``fullrange`` to make predictions over the full range of data.
+
+```{r}
+
+ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g, color = species )) + 
+  geom_point() +
+  geom_smooth(method = "lm", fullrange = TRUE)
+
+```
+
+By doing this, we can see that the error increases, the further away we are from the data of a certain group as it gets harder to find an estimate.
+
+
+#### Exercises
+
+For this exercise, lets view the mtcars dataset. The mtcars dataset contains information for 32 cars from Motor Trends magazine from 1974. This dataset is small, intuitive, and contains a variety of continuous and categorical (both nominal and ordinal) variables.
+
+1. Look at the structure of mtcars and draw a scatter plot of mpg vs. wt.
+2. Update the plot to add a smooth trend line. Use the default method, which uses the LOESS model to fit the curve.
+3. Update the smooth layer. Apply a linear model by setting method to "lm", and turn off the model's 95% confidence interval
+4. Draw the same plot again, swapping geom_smooth() for stat_smooth().
+
+```{r, include=FALSE}
+
+#question1
+str(mtcars)
+
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point()
+
+#question2
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point() +
+  geom_smooth()
+
+#question3
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+
+#question4
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point() +
+  stat_smooth(method = "lm", se = FALSE)
+```
+
+Now lets get a bit more fancy and try grouping variables.
+
+1.Using mtcars, plot mpg vs. wt, colored by gear, add a point layer and a smoothing stat using a linear model and don't show the confidence interval. For this to work correctly, we need to tell R to use gear not as numeric but as a factor with ``factor(gear)``
+2. Update the plot to add a second smooth stat: Add a dummy group aesthetic to this layer, setting the value to 1. & Use the same method and se values as the first stat smooth layer.
+
+```{r, include = FALSE}
+
+#question1
+ggplot(mtcars, aes(x = wt, y = mpg, color = factor(gear))) +
+  geom_point() +
+  stat_smooth(method = "lm", se = FALSE)
+
+#question2
+ggplot(mtcars, aes(x = wt, y = mpg, color = factor(gear))) +
+  geom_point() +
+  stat_smooth(method = "lm", se = FALSE) +
+  stat_smooth(aes(group = 1), method = "lm", se = FALSE)
+
+```
+
+In the last example, we see that the color aesthetic defined an invisible group aesthetic. Defining the group aesthetic for a specific geom means we can overwrite that. Here, we use a dummy variable to calculate the smoothing model for all values.
+
+Now, lets try to modify stat_smooth a bit.
+
+1. Explore the effect of the span argument on LOESS curves by doing a scatter plot of wt vs mpg Add three smooth LOESS stats, each without the standard error ribbon. 
+
+- Color the 1st one "red"; set its span to 0.9.
+- Color the 2nd one "green"; set its span to 0.6.
+- Color the 3rd one "blue"; set its span to 0.3.
+
+2. Compare LOESS and linear regression smoothing on small regions of data when plotting wt against mpg and grouping by cyl.
+
+- Add a smooth LOESS stat, without the standard error ribbon.
+- Add a smooth linear regression stat, again without the standard error ribbon.
+
+3. LOESS isn't great on very short sections of data; compare the pieces of linear regression to LOESS over the whole thing. Amend the smooth LOESS stat by adding an aesthetic to map color to a dummy variable, "All" to our previous plot.
+
+```{r, include = FALSE}
+
+#question1
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point() +
+  stat_smooth(se = FALSE, span = 0.9, color = "red") +
+  stat_smooth(se = FALSE, span = 0.6, color = "green") +
+  stat_smooth(se = FALSE, span = 0.3, color = "blue")
+
+#quesiton2
+ggplot(mtcars, aes(x = wt, y = mpg, color = factor(cyl))) +
+  geom_point() +
+  stat_smooth(se = FALSE) +
+  stat_smooth(method = "lm", se = FALSE)
+
+#quesiton3
+ggplot(mtcars, aes(x = wt, y = mpg, color = factor(cyl))) +
+  geom_point() +
+  stat_smooth(aes(color = "All"), se = FALSE) +
+  stat_smooth(method = "lm", se = FALSE)
+```
+
+
+Let's try to modify some more. 
+
+1. Using the pengion data, plot bill_length_mm vs. body_mass_g, colored by species Use geom_jitter() to add jittered points with transparency 0.25. Add a smooth linear regression stat (with the standard error ribbon).
+2. It's easier to read the plot if the standard error ribbons match the lines, and the lines have more emphasis. Update the smooth stat. Map the fill color to species Set the line size to 2.
+
+
+```{r, include = FALSE}
+
+#question1
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_jitter(alpha = 0.25) +
+  stat_smooth(method = "lm")
+
+
+#question2
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_jitter(alpha = 0.25) +
+  stat_smooth(aes(fill = species), method = "lm", size = 2)
+
+```  
+
+Especially with larger datasets, were lines overlap things will become easier to see.
+
+# Sum and quantiles
+
+Remember one of our first plots, were we had data that was kind of hard to see because of overlapping points?
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g)) +
+  geom_point()
+  
+```
+
+We tried jittering our data to overcome this but of course this adds random noise.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g)) +
+  geom_jitter()
+  
+```
+
+Another option to clarify things is by using ``geom_count``, which counts the number of observations at each location, then maps the count to point area. It useful when you have discrete data and overplotting.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g)) +
+  geom_count()
+  
+```
+
+Similarly above, there is a stats function, stats_sum(), which would call the same plot as when we are using geom_count(). 
+
+However, we still might have overplotting, if the points are colored by another variable.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_count(alpha = 0.4)
+  
+```
+
+Another way to describe our data is ``geom_quantile``, which allows us to model quantiles, which we might want to use instead of linear models if we encounter heteroscedasticity (refers to the circumstance in which the variability of a variable is unequal across the range of values of a second variable that predicts it.). 
+
+I.e. in the plot below, the variance on the y axis is not consistent as we move along the x-axis. 
+
+Linear regression predicts the mean response from the explanatory variables, quantile regression predicts a quantile response (e.g. the median) from the explanatory variables. Specific quantiles can be specified with the quantiles argument.
+
+Additionally, quantile regression is a great tool for getting a more detailed overview of a large dataset.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g)) +
+  geom_point(alpha = 0.4)
+  
+```
+
+We can use the geom_quantile to model the 5th and 95th percentile as well as the median. The stat function, that would do the same thing is stat_quantile.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g)) +
+  geom_point(alpha = 0.4) +
+  geom_quantile(quantiles = c(0.05, 0.5, 0.95 ))
+  
+```
+
+#### Exercise
+
+1. From the penguin data, plot the bill length versus the body mass, create a jittered plot with an alpha of 0.25. Update the plot to add a quantile regression stat with stat_quantile, at quantiles 0.05, 0.5, and 0.95.
+2. Amend the plot to color according to species
+
+
+```{r, include=FALSE}
+
+#question1
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g)) +
+  geom_jitter(alpha = 0.25) +
+  stat_quantile(quantiles = c(0.05, 0.5, 0.95 ))
+
+#question2
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_jitter(alpha = 0.25) +
+  stat_quantile(quantiles = c(0.05, 0.5, 0.95 ))
+
+```
+
+
+
+1. From the penguin data, plot the bill length versus the body mass, create a jittered plot with an alpha of 0.25. To avoid overplotting, use stat_sum
+2. Modify the size aesthetic with the appropriate scale function. Add a scale_size() function to set the range from 1 to 10.
+3. Inside stat_sum(), set size aes to ``..prop..`` so circle size represents the proportion of the whole dataset.
+4. Update the plot to group by sex, so that circle size represents the proportion of the group.
+
+
+```{r, include=FALSE}
+
+#question1
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g)) +
+  stat_sum()
+
+#question2
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g)) +
+  stat_sum() +
+  scale_size(range = c(1,10))
+
+#question3
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g)) +
+  stat_sum(aes(size = ..prop..))
+
+#question4
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g, group = sex)) +
+  stat_sum(aes(size = ..prop..))
+
+```
+
+# Stats outside geomes
+
+For this, lets first lets look at a basic representation of our data
+
+```{r}
+
+ggplot(penguins_clean, aes(x = species, y = body_mass_g)) +
+  geom_jitter(width = 0.2)
+  
+```
+
+## Calculating statistics
+
+Ideally we want to do more with this data, i.e. summarizing and showing basic statistics. We can calculate these manually using ``mean()`` and ``sd()`` or we can do this directly in ggplot2.
+
+Let's first get the summary stats
+
+```{r}
+
+summary_Data <- penguins_clean %>%
+  select(species, body_mass_g)  %>%
+  summarize(mean_mass = mean(body_mass_g),
+            sdl = mean_sdl(body_mass_g))
+
+summary_Data
+  
+```
+
+In ggplot2 , we can do it like this.
+
+```{r}
+
+mean_sdl(penguins_clean$body_mass_g, mult = 1)
+
+```
+
+Here, mean_sdl computes the mean plus or minus a constant times the standard deviation and mult = 1 means that we use 1 as the multiplier for the standard deviation.
+
+## Stat_summary()
+
+We can call ``mean_sdl`` using the fun.data arugment in stat_summary. The code below usies ``geom_pointrange()`` by default.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = species, y = body_mass_g)) +
+  stat_summary(fun.data = mean_sdl,
+               fun.args = list(mult = 1))
+
+```
+
+We can easily add the error bars.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = species, y = body_mass_g)) +
+  #lets first plot the mean
+  stat_summary(fun.y = mean,
+               geom = "point") +
+  #now lets plot the error bars
+  stat_summary(fun.data = mean_sdl, 
+               fun.args = list(mult = 1), 
+               geom = "errorbar",
+               width = 0.1)
+
+```
+
+Notice, we could have made an bargraph with error bars.
+
+```{r}
+
+#calculate the sd
+penguins_summary <- penguins_clean %>%
+  select(species, body_mass_g)  %>%
+  group_by(species) %>%
+  summarise(mean_mass = mean(body_mass_g),
+            sd = sd(body_mass_g))
+
+#plot
+ggplot(penguins_summary, aes(x = species, y = mean_mass)) + 
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = mean_mass - sd, ymax = mean_mass + sd,
+                    width = 0.2))
+
+```
+
+However, a downside of a bargraph is that bar graphs used to describe a continuum of data are often uninformative and misleading as we do not see the actual data that was used to plot the graphs.
+
+## 95% confidence intervals
+
+We can calculate the confidence intervals like this.
+
+```{r}
+
+mean_cl_normal(penguins_clean$body_mass_g)
+
+```
+
+``mean_cl_normal`` calculates the mean and the upper and lower bounds of the confidence intervals.
+
+## Other stat functions
+
+- stat_summary() --> summarize y-values at distinct x values
+- stat_function() --> compute y values from a function of x values
+- stat_qq() --> perform calculations for a quantile-quantile plot
+
+
+## Normal distribution
+
+For statisticians it is important to evaluate whether our data is normaly distributed since some statistical tests assume this for the data they work on. The normal distribution is a continuous probability distribution that is symmetrical on both sides of the mean, so the right side of the center is a mirror image of the left side. 
+
+Using the stat_function, we can look at how well our data is distributed.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = body_mass_g)) + 
+  #generate a density plot
+  geom_histogram(aes( y = ..density..)) +
+  #view our data in a 1d plot
+  geom_rug() +
+  #plot the theoretical probability distribution as a line
+  stat_function(fun = dnorm, color = "red",
+                args = list(mean = mean(penguins_clean$body_mass_g),
+                            sd = sd(penguins_clean$body_mass_g)))
+
+
+```
+
+In this specific example, we can see that there is a bit of a skew in the data.
+
+## QQplots
+
+QQplots also allow us to compare our data to a distribution. Below, we plot our sample against a theoretical distribution, like the normal. The closer it aligns, the closer it matches a theoretical distribution.
+
+```{r}
+
+ggplot(penguins_clean, aes(sample = body_mass_g)) + 
+  stat_qq() +
+  geom_qq_line(col = "red")
+  
+```
+
+#### Exercises
+
+Lets use the mtcars package to play a bit with sme parameters.
+
+1. With mtcars, plot cyl against wt and color by am. Be careful to factor both cyl and am. Assign this to p_wt_vs_fcyl_by_fam and add a point layer
+2. Jitter the points, by changing the position to position_jitter with a width of 0.2.
+3. Apply position_dodge with a width of 0,1
+4. Apply position_jitterdodge with jitter.width of 0.2 and dodge.width of 0.1
+
+```{r, include = FALSE}
+
+#question 1
+p_wt_vs_fcyl_by_fam <- ggplot(mtcars, aes(x = factor(cyl), y = wt, color = factor(am))) 
+
+p_wt_vs_fcyl_by_fam + geom_point()
+
+#quesiton2
+p_wt_vs_fcyl_by_fam + geom_point(position = position_jitter(width = 0.2))
+
+#quesiton3
+p_wt_vs_fcyl_by_fam + geom_point(position = position_dodge(width = 0.2))
+
+#quesiton4
+p_wt_vs_fcyl_by_fam + geom_point(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.1))
+
+
+```
+
+Now, that we got a feel for the data, lets plot summary stats to p_wt_vs_fcyl_by_fam.
+
+1. Add error bars representing the standard deviation. Set the data function to mean_sdl (without parentheses). Draw 1 standard deviation each side of the mean, pass arguments to the mean_sdl() function by assigning them to fun.args in the form of a list. use position_dodge, with width 0.2.
+2. The default geom for stat_summary() is "pointrange" which is already great. Update the summary stat to use an "errorbar" geom by assigning it to the geom argument.
+3. Update the plot to add a summary stat of 95% confidence limits. Set the data function to mean_cl_normal (without parentheses). Again, use the dodge position.
+
+
+```{r, include=FALSE}
+
+#question1
+p_wt_vs_fcyl_by_fam +
+  stat_summary(fun.data = mean_sdl,
+               fun.args = list(mult = 1),
+               position = position_dodge(width = 0.2))
+
+#question2
+p_wt_vs_fcyl_by_fam +
+  stat_summary(geom = "errorbar",
+              fun.data = mean_sdl,
+               fun.args = list(mult = 1),
+               position = position_dodge(width = 0.2))
+
+#question3
+p_wt_vs_fcyl_by_fam +
+  stat_summary(geom = "errorbar",
+              fun.data = mean_cl_normal,
+               fun.args = list(mult = 1),
+               position = position_dodge(width = 0.2))
+```
+
+# Coordinates layer
+
+The coordinates layer controls the dimensions of your plot.
+
+- ``coort_cartesian()`` - the most common coordinates system. Setting limits on the coordinate system will zoom the plot (like you're looking at it with a magnifying glass), and will not change the underlying data like setting limits on a scale will.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth()
+
+```
+
+We could use scale-x_continuous as well to zoom in.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth() +
+  scale_x_continuous(limits = c(30,50))
+
+```
+
+When doing this, we get an important message: some data was removed from our plot. This happened, because we have bills longer than 50 mm. We can also see that the models look slightly different.
+
+Another way to plot this is use x_lim as a function.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth() +
+  xlim(c(30,50))
+
+```
+
+Now, lets zoom in with coord_cartesian
+
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth() +
+  coord_cartesian(xlim = c(30,50))
+
+```
+
+Now we see, that no points are missing the curve continues part 50 and the models do not change. So when using coord_cartesian we DO NOT filter the dataset, we only zoom in.
+
+Therefore, alway be careful when changing the x and ylimits, as part of the data might be excluded, always read the warning messages.
+
+## Changing aspect ratios
+
+- the height to width ratio
+- watch out: changing the ratio can be an easy way to deceive people
+- there is no standard on how to best choose this ratio
+- typically it is best to use a 1:1 ratio if data is on the same scale
+
+coord_fixed is useful when displaying when x and y are measures of the same units.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = bill_depth_mm, color = species)) +
+  geom_point(alpha = 0.5) + 
+  coord_fixed() #default aspect of 1:1, the physical distance for each unit is the same
+
+```
+
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = bill_depth_mm, color = species)) +
+  geom_point(alpha = 0.5) + 
+  coord_fixed(0.55) #reducing the aspect ratio, this flattens the curve
+
+```
+
+#### Exercises
+
+1. For mtcars, plot wt against hp and color by am (don't forget to factor am). Add a point layer and a geom_smooth layer. Add a continuous x scale from 3 to 6. Look at the plot with and without using the scaling.
+2. Update the plot by adding a Cartesian coordinate system with x limits, xlim, from 3 to 6.
+3. Instead of using the cartesian coordinate, use the fixed coordinate system and plot wt against qsec.
+4. THat is a bit, slim, lets fix this to make the plot easier to read. Try different ratios to see what happens.
+
+```{r, include=FALSE}
+
+#question1
+ggplot(mtcars, aes(x = wt, y = hp, color = factor(am))) +
+  geom_point() +
+  geom_smooth() +
+  scale_x_continuous(limits = c(3,6))
+
+#question2
+ggplot(mtcars, aes(x = wt, y = hp, color = factor(am))) +
+  geom_point() +
+  geom_smooth() +
+  coord_cartesian(xlim = c(3,6))
+
+#question3
+ggplot(mtcars, aes(x = wt, y = qsec, color = factor(am))) +
+  geom_point() +
+  geom_smooth() +
+  coord_fixed()
+
+#question4
+ggplot(mtcars, aes(x = wt, y = qsec, color = factor(am))) +
+  geom_point() +
+  geom_smooth() +
+  coord_fixed(ratio = 0.1)
+
+```
+
+
+## Expand and clip
+
+The coord_*() layer functions offer two useful arguments that work well together: expand and clip.
+
+- expand sets a buffer margin around the plot, so data and axes don't overlap. Setting expand to 0 draws the axes to the limits of the data.
+- clip decides whether plot elements that would lie outside the plot panel are displayed or ignored ("clipped").
+
+Adding Cartesian coordinates with zero expansion removes all buffer margins on both the x and y axes.
+
+```{r}
+
+ggplot(mtcars, aes(wt, mpg)) +
+  geom_point(size = 2) +
+  # Add Cartesian coordinates with zero expansion
+  coord_cartesian(expand = 0) +
+  theme_classic()
+
+```
+
+
+Setting expand to 0 caused points at the edge of the plot panel to be cut off.
+
+We can set the clip argument to "off" to prevent this.
+
+```{r}
+
+ggplot(mtcars, aes(wt, mpg)) +
+  geom_point(size = 2) +
+  # Add Cartesian coordinates with zero expansion
+  coord_cartesian(expand = 0, clip = "off") +
+  theme_classic() 
+```
+
+# Coordinates versus scales
+
+
+Again, lets start with a basic plot, this time using the mammal sleep data has it covers a range of values
+
+
+```{r}
+
+ggplot(msleep, aes(x = bodywt, y = 1)) +
+  geom_jitter(alpha = 0.5) +
+  scale_x_continuous(limits = c (0,7000),
+                     breaks = seq(0,7000,1000))
+
+```
+
+We can see, that we have a large skew to the left/ If our data is skewed in any way, i.e. to the right or left, we can transform it with several ways. 
+
+## Transform raw data
+
+We can log transform data directly in the aes function.
+
+```{r}
+
+ggplot(msleep, aes(x = log10(bodywt), y = 1)) +
+  geom_jitter(alpha = 0.5) +
+  scale_x_continuous(limits = c (-3,4),
+                     breaks = -3:4)
+
+```
+
+This however, can be misleading as the transformed scale is linear and we need to do some mental jumps to get back to the original values.
+
+## Add logtick annotation
+
+```{r}
+
+ggplot(msleep, aes(x = log10(bodywt), y = 1)) +
+  geom_jitter(alpha = 0.5) +
+  scale_x_continuous(limits = c (-3,4),
+                     breaks = -3:4)  +
+  annotation_logticks(sides = "b")
+
+```
+
+## Use a log scale
+
+- ``scale_x_log10()`` will do the math for you and transform the data.
+
+```{r}
+
+ggplot(msleep, aes(x = bodywt, y = 1)) +
+  geom_jitter(alpha = 0.5)  +
+  scale_x_log10()
+
+```
+
+Using scale_y_log10() and scale_x_log10() is equivalent to transforming our actual dataset before getting to ggplot2.
+
+## Use a log function in the coordinate layer
+
+Using coord_trans(), setting x = "log10" and/or y = "log10" arguments, transforms the data after statistics have been calculated. The plot will look the same as with using scale_*_log10(), but the scales will be different, meaning that we'll see the original values on our log10 transformed axes. This can be useful since log scales can be somewhat unintuitive.
+
+```{r}
+
+ggplot(msleep, aes(x = bodywt, y = 1)) +
+  geom_jitter(alpha = 0.5)  +
+  coord_trans(x = "log10")
+
+```
+
+The difference between transforming the scales and transforming the coordinate system is that scale
+transformation occurs BEFORE statistics, and coordinate  transformation afterwards.  
+Coordinate transformation also changes the shape of geom.
+
+#### Exercise 
+
+1. Using the msleep dataset, plot the raw values of brainwt against bodywt values as a scatter plot. Do not worry about the warning, as we have somemissing data.
+2. Add the scale_x_log10() and scale_y_log10() layers with default values to transform the data before plotting.
+3. Use coord_trans() to apply a "log10" transformation to both the x and y scales.
+
+```{r, include=FALSE}
+
+#qst1
+ggplot(msleep, aes( x = bodywt, y = brainwt)) +
+  geom_point() +
+  ggtitle("Raw Values")
+
+#qst2
+ggplot(msleep, aes( x = bodywt, y = brainwt)) +
+  geom_point() + 
+  scale_x_log10() +
+  scale_y_log10()
+
+#qst3
+#qst2
+ggplot(msleep, aes( x = bodywt, y = brainwt)) +
+  geom_point() +
+  coord_trans(x = "log10", y = "log10")
+
+```
+
+When running ``cord_trans() ``, we need to be careful since the statistics are calculated on the untransformed data. A linear model may end up looking not-so-linear after an axis transformation. Let's revisit the two plots from the previous exercise and compare their linear models.
+
+1.  On the data we plotted above use geom_smooth with a lm model and do not plot the standard error. add log10 transformed scales to the x and y axes to our first plot. 
+2. Instead of using transformed scales. Add a log10 coordinate transformation for both the x and y axes.
+3. Compare the two plots, do you see a difference?
+
+```{r, include=FALSE}
+
+#qst1
+ggplot(msleep, aes( x = bodywt, y = brainwt)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_x_log10() +
+  scale_y_log10()
+
+#qst1
+ggplot(msleep, aes( x = bodywt, y = brainwt)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) +
+  coord_trans(x = "log10", y = "log10")
+
+```
+
+The smooth trend line is calculated after scale transformations but not coordinate transformations, so the second plot doesn't make sense. Be careful when using the coord_trans() function!
+
+# Double and flipped axes
+
+## Double axes
+
+Generally, having these is not ideal as it can distort the data but lets have a look at when it can work.
+
+I.e. a problem with log-transformed data is that the data becomes harder to read. To improve on this, we can actually add a second axis with the actual labels.
+
+```{r}
+
+ggplot(msleep, aes(x = bodywt, y = 1)) +
+  geom_jitter(alpha = 0.5) + 
+  scale_x_log10(
+    breaks = c(1e-02, 1e1, 1e2, 1e3,1e4), 
+    sec.axis = sec_axis(~., 
+                        breaks = c(0,0.1,1,10,100,1000,7000),
+                        name = "weight (mg)",
+                        labels = scales::comma)) 
+
+
+  
+
+```
+
+## Flipped axes
+
+We can flip axes to change the direction of dependencies or change the orientation of geometries.
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = flipper_length_mm, color = species )) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+Here, bill length and flipper length are dependent variables. They are dependent on the species, which is the independent variable.
+Statistically, it does not matter which is mapped on the x or y-axis but in some cases it does since y is read as a function of x. Typically, we map the dependent variable on the y-axis and the independent variable on the x-axis.
+
+We can flip axes like this:
+
+```{r}
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = flipper_length_mm, color = species )) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  coord_flip()
+
+```
+
+Notice, we can only use one coord layer function per plot, so we now can not change the aspect ratio any more.
+
+

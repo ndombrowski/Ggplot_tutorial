@@ -1,0 +1,287 @@
+---
+title: Example workflow
+project:
+  type: website
+execute:
+  eval: true
+format:
+  html:
+    embed-resources: true
+    df-print: paged
+    toc: true
+    toc-depth: 3
+theme:
+  light: cosmo
+  dark: darkly
+code-block-bg: true
+code-block-border-left: "#31BAE9"
+editor_options: 
+  chunk_output_type: inline
+---
+
+
+Below you can find a step-by-step guide how to visualize a graphic. 
+
+This is not obligatory, but maybe useful for anyone wanting to play around with data on their own time.
+
+```{r}
+#load data
+library(gapminder)
+library(tidyverse)
+
+#subset the data
+data_2007 <- gapminder |>
+  filter(year == 2007)
+
+#check the data
+str(data_2007)
+```
+
+
+First, lets explore the data with a histogram.
+
+```{r}
+ggplot(data_2007, aes(x = lifeExp)) + 
+  geom_histogram()
+```
+
+
+To make life easier, lets only focus on the top 10 and bottom 10 data points. 
+
+```{r}
+
+data_2007_subset <- data_2007 |> 
+  filter( min_rank(desc(lifeExp)) <= 10 | 
+          min_rank(lifeExp) <= 10 ) |> 
+  arrange(lifeExp)
+
+data_2007_subset
+
+```
+
+Lets plot this.
+
+```{r}
+
+ggplot(data_2007_subset, aes(x = lifeExp, y = country)) + 
+  geom_point()
+
+```
+
+The order is not very intuitive since ggplot uses alphabeetical order. Lets change this and add some colors and add a line to show, that we work with an age range.
+
+```{r}
+
+#reorder levels
+data_2007_subset$country <- factor(data_2007_subset$country,levels = as.character(data_2007_subset$country))
+
+#plot
+ggplot(data_2007_subset, aes(x = lifeExp, y = country, color = lifeExp)) + 
+  geom_point(size =5) 
+
+```
+
+Now, lets add a line, to show that we work with a range of dates.
+geom_segment() adds line segments and requires two additional aesthetics: xend and yend.
+
+```{r}
+
+#plot
+ggplot(data_2007_subset, aes(x = lifeExp, y = country, color = lifeExp)) + 
+  geom_point(size =5) +
+  geom_segment(aes(xend = 0, yend = country), size = 2)
+
+
+```
+
+
+We can also add the actual values.
+
+```{r}
+
+#plot
+ggplot(data_2007_subset, aes(x = lifeExp, y = country, color = lifeExp)) + 
+  geom_point(size =5) +
+  geom_segment(aes(xend = 0, yend = country), size = 2) +
+  geom_text(aes(label = round(lifeExp, digits = 1)), size =1.5, color = "white")
+
+```
+
+Now, lets clean up the scales.
+
+```{r}
+
+#plot
+ggplot(data_2007_subset, aes(x = lifeExp, y = country, color = lifeExp)) + 
+  geom_point(size =5) +
+  geom_segment(aes(xend = 0, yend = country), size = 2) +
+  geom_text(aes(label = round(lifeExp, digits = 1)), size =1.5, color = "white") +
+  scale_colour_gradient(low = "#990000", high = "#325C74")
+
+```
+
+Add the x-axis to the top of the plot and remove the tick marks from the y-axis
+
+```{r}
+
+#plot
+ggplot(data_2007_subset, aes(x = lifeExp, y = country, color = lifeExp)) + 
+  geom_point(size =5) +
+  geom_segment(aes(xend = 0, yend = country), size = 2) +
+  geom_text(aes(label = round(lifeExp, digits = 1)), size =1.5, color = "white") +
+  scale_colour_gradient(low = "#990000", high = "#325C74") +
+  scale_x_continuous(position = "top", expand = c(0,0), limits = c(0,90), breaks = seq(0,90,10)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank())
+  
+
+```
+
+
+Add a title and a caption to refer to the dataset.
+
+```{r}
+
+#plot
+ggplot(data_2007_subset, aes(x = lifeExp, y = country, color = lifeExp)) + 
+  geom_point(size =5) +
+  geom_segment(aes(xend = 0, yend = country), size = 2) +
+  geom_text(aes(label = round(lifeExp, digits = 1)), size =1.5, color = "white") +
+  scale_colour_gradient(low = "#990000", high = "#325C74") +
+  scale_x_continuous(position = "top", expand = c(0,0), limits = c(0,90), breaks = seq(0,90,10)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(title = "Highest and lowest life expectancies in 2007", caption = "gapminder")
+  
+```
+
+Remove non-data ink
+
+```{r}
+
+#plot
+ggplot(data_2007_subset, aes(x = lifeExp, y = country, color = lifeExp)) + 
+  geom_point(size =5) +
+  geom_segment(aes(xend = 0, yend = country), size = 2) +
+  geom_text(aes(label = round(lifeExp, digits = 1)), size =1.5, color = "white") +
+  scale_colour_gradient(low = "#990000", high = "#325C74") +
+  scale_x_continuous(position = "top", expand = c(0,0), limits = c(0,90), breaks = seq(0,90,10)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(title = "Highest and lowest life expectancies in 2007", caption = "gapminder") +
+  theme(panel.grid = element_blank(),
+        rect = element_blank(),
+        axis.line.x.top = element_line(color = "black"), 
+        legend.position = "none")
+  
+```
+
+We can also add threshold lines, ie the global mean.
+
+```{r}
+
+global_mean = mean(data_2007_subset$lifeExp)
+global_mean
+
+#plot
+ggplot(data_2007_subset, aes(x = lifeExp, y = country, color = lifeExp)) + 
+  geom_point(size =5) +
+  geom_segment(aes(xend = 0, yend = country), size = 2) +
+  geom_text(aes(label = round(lifeExp, digits = 1)), size =1.5, color = "white") +
+  scale_colour_gradient(low = "#990000", high = "#325C74") +
+  scale_x_continuous(position = "top", expand = c(0,0), limits = c(0,90), breaks = seq(0,90,10)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(title = "Highest and lowest life expectancies in 2007", caption = "gapminder") +
+  theme(panel.grid = element_blank(),
+        rect = element_blank(),
+        axis.line.x.top = element_line(color = "black"), 
+        legend.position = "none") +
+  geom_vline(xintercept = global_mean, linetype = "dotted")
+  
+```
+
+
+Ideally, we add a label to our line as well. here, we use annotate() to add text and later a curve to the plot.
+
+```{r}
+
+#plot
+ggplot(data_2007_subset, aes(x = lifeExp, y = country, color = lifeExp)) + 
+  geom_point(size =5) +
+  geom_segment(aes(xend = 0, yend = country), size = 2) +
+  geom_text(aes(label = round(lifeExp, digits = 1)), size =1.5, color = "white") +
+  scale_colour_gradient(low = "#990000", high = "#325C74") +
+  scale_x_continuous(position = "top", expand = c(0,0), limits = c(0,90), breaks = seq(0,90,10)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(title = "Highest and lowest life expectancies in 2007", caption = "gapminder") +
+  theme(panel.grid = element_blank(),
+        rect = element_blank(),
+        axis.line.x.top = element_line(color = "black"), 
+        legend.position = "none") +
+  geom_vline(xintercept = global_mean, linetype = "dotted") +
+  annotate("text",
+          label = "global mean \n average",
+          x = global_mean + 5,
+          y = 2,
+          hjust = 0, 
+          size = 3, 
+          fontface = 3)
+  
+```
+
+We can even add an arrow to make sure it is clear what the label refers to.
+
+```{r}
+
+#plot
+ggplot(data_2007_subset, aes(x = lifeExp, y = country, color = lifeExp)) + 
+  geom_point(size =5) +
+  geom_segment(aes(xend = 0, yend = country), size = 2) +
+  geom_text(aes(label = round(lifeExp, digits = 1)), size =1.5, color = "white") +
+  scale_colour_gradient(low = "#990000", high = "#325C74") +
+  scale_x_continuous(position = "top", expand = c(0,0), limits = c(0,90), breaks = seq(0,90,10)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(title = "Highest and lowest life expectancies in 2007", caption = "gapminder") +
+  theme(panel.grid = element_blank(),
+        rect = element_blank(),
+        axis.line.x.top = element_line(color = "black"), 
+        legend.position = "none") +
+  geom_vline(xintercept = global_mean, linetype = "dotted") +
+  annotate("text",
+          label = "global mean \n average",
+          x = global_mean + 5,
+          y = 2,
+          hjust = 0, 
+          size = 3, 
+          fontface = 3) +
+  annotate( geom = "curve", x = global_mean + 6, y = 3, xend = global_mean, yend = 5, 
+            curvature = .3, 
+            arrow = arrow(length = unit(2, "mm"))
+  ) 
+  
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

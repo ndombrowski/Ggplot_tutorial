@@ -1,0 +1,1297 @@
+---
+title: An introduction into Ggplot
+project:
+  type: website
+execute:
+  eval: true
+fig-width: 400
+format:
+  html:
+    fig-width: 5
+    fig-height: 4
+    embed-resources: true
+    df-print: paged
+    toc: true
+    toc-depth: 3
+    link-external-newwindow: true
+    #output-file: index.html  
+theme:
+  light: cosmo
+  dark: darkly
+code-block-bg: true
+code-block-border-left: "#31BAE9"
+editor_options: 
+  chunk_output_type: inline
+ 
+---
+
+
+```{r}
+#| echo: false
+
+library(knitr)
+knitr::opts_chunk$set(eval=TRUE, cache=FALSE, message=FALSE, warning=FALSE, 
+                      comment = "", results="markup")
+#https://bookdown.org/yihui/rmarkdown/html-document.html
+#install.packages('knitr', dependencies = TRUE)
+#install.packages("devtools", lib="~/R/lib")
+#library(DT)
+#devtools::session_info()
+```
+
+
+## Introduction
+
+This tutorial will introduce the basics of ggplot. Please notice, that there can be some overlap with other tutorials.
+
+Visualizing data is important not only for publishing but also to explore our data. For example, while a regression analysis might say that we have correlated data, there might be issues with outliers and so on, which we only see when plotting the data. For example in the data below, all 4 plots give the same regression line but the data points behave very differently.
+
+![](C:/Users/ndmic/WorkingDir/Notebooks/Pictures/ggplot1.png){width=50% fig-align="left"}
+
+
+## Setting up the working directory
+
+For this tutorial to run we need to install some tools first. Specifically, we need to download the data we will explore today and the tools of the tidyverse (which includes ggplot, our plotting library). To do this type the following into your R notebook or console:
+
+```{r}
+#| eval: false
+remotes::install_github("allisonhorst/palmerpenguins")
+install.packages("tidyverse")
+```
+
+```{r}
+#load packages
+library(tidyverse)      #tools for transforming data
+library(palmerpenguins)
+```
+
+
+## Data exploration and cleaning
+
+During this tutorial we will work with two datasets:
+
+- the palmerpenguins dataset, a data set that records details of 344 penguins. This will be the main data set we will explore.
+- The beaver2 dataset, a time series of the temperature of a beaver. Time-series are best represented in line plits and we will explore this data when talking about these types of plots.
+
+Let's have a first look at the penguin dataset::
+
+```{r}
+#get a first look at the penguin dataset
+kable(head(penguins), format='markdown')
+```
+
+
+```{r}
+#view the data structure of the penguin data
+str(penguins)
+```
+And lets get a basic summary of our data:
+
+```{r}
+summary(penguins)
+```
+
+For each data column we get the number of observations (for factor data) as well as basic summary statistics for all numerical data. Another useful piece of information we get is the number of missing values for each column. 
+
+Since the penguin dataset has rows with missing data, let's remove a row if data is missing in any column:
+
+```{r}
+#discard rows with NAs
+penguins_clean <-
+  penguins |> 
+  drop_na()
+
+#sanity check to control whether 11 rows were dropped
+print(dim(penguins))
+print(dim(penguins_clean))
+```
+
+:::{.callout-note}
+Sanity checks are an important step when manipulating data and we recommend to always do them.
+
+In the example above, we check the number of dimension of our data frame before and after cleaning and ensure that the number of rows that were removed make sense.
+:::
+
+
+## Our first scatterplot
+
+Now we can start plotting!
+
+Let's start with a scatterplot. Here, we:
+
+1. Define what we want to plot and provide the data (i.e. penguins_clean)
+2. Map the variables of your dataset to aes(thetics) in our graph. More specifically, we define what we want to plot on the x-/and y-axes.
+3. Define how we want to plot our data, i.e. we want to generate a scatterplot via ``geom_point()``. Thereby we add a layer to our plot using the `+` symbol. 
+
+
+```{r}
+ggplot(penguins_clean, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point()
+```
+
+
+By default, ggplot expects the first aesthetic to be the x and the second to be the y variable. So we could also write the code a bit shorter and still get the exact same result:
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
+  geom_point()
+```
+
+:::{.callout-note}
+While omitting the `x=` and `y=` is definitely shorter the code becomes a little less easy to understand, 
+therefore, its important to find a good balance between keeping code short but readable.
+:::
+
+
+
+## Saving plots as variables
+
+Plots can be saved as variables, which can be added two later on using the + operator. This is really useful if you want to make multiple related plots from a common base.
+
+```{r}
+#save our first layer
+plt_pengs <- ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g))
+
+#add the second layer to generate a scatter plot
+plt_pengs +
+  geom_point()
+```
+
+We can also change the color of individual geoms in this manner:
+
+```{r}
+#define plot
+plt_pengs <- ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g))
+
+# make a scatter plot and map the color to species
+plt_pengs_by_species <- plt_pengs + geom_point(aes(color = species))
+
+# See the plot
+plt_pengs_by_species
+```
+
+
+## Using more than one data set
+
+The data doesn't need to be the same on each layer. To generate an example, lets fit a model on our data (without going into the data) and also plot it:
+
+```{r}
+mod <- lm(flipper_length_mm ~ body_mass_g, data = penguins_clean)
+grid <- data_frame(body_mass_g = seq(min(penguins_clean$body_mass_g), max(penguins_clean$body_mass_g), length = 200))
+grid$flipper_length_mm <- predict(mod, newdata = grid)
+```
+
+Now, we can add this to our original plot:
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
+  geom_point() +
+  geom_line(data = grid)
+```
+
+You can easily use this approach to add layers to your plot for summary statistics, labels for outliers, etc.
+
+
+## Visible aesthetics
+
+We already learned how we map things onto the x and y axes. For example, we mapped the flipper length onto the x and the body mass onto the y aesthetic. We typically call mappings in the aes() function.
+
+We can easily add more mappings:
+
+- color = changes the fill of points but in other geoms fills the outlines
+- fill = changes the fill color
+- size = changes the area or radius of points, thickness of lines
+- shape = changes the shape of our data points
+- alpha = adjusts the transparency
+- line = changes the dash pattern of a line
+- labels = allows to change text on a plot or axes
+
+Let's quickly talk about the distinction between aesthetics and attributes in the world of ggplot syntax: Aesthetics are defined inside aes() and attributes are used defined outside the aes(). For example, we can map the species to the color aesthetic and therefore control how the species are colored: 
+
+### Colors
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g, color = species)) +
+  geom_point()
+```
+
+In contrast, attributes control how something looks, for example, we can decide to make all dots blue by using a color attribute outside the `aes()` call:
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
+  geom_point(color = "blue")
+```
+
+
+**Exercise**
+
+Make a scatterplot comparing the flipper and bill lengths and assign the islands to different colors.
+
+```{r}
+#| code-fold: true
+#| eval: false
+ggplot(penguins_clean, aes(flipper_length_mm, bill_length_mm, color = island)) +
+  geom_point()
+```
+
+
+
+### Sizes
+
+We can also change the size instead of coloring our data points, by using the size aesthetic.
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g, size = bill_depth_mm)) +
+  geom_point()
+```
+
+### Shapes
+
+Additionally, for categorical data, we can give different shapes to our data points.
+
+Notice, there are a limited number of shapes available, so this works only for certain datasets. The default geom_point() uses shape = 19: a solid circle. An alternative is shape = 21: a circle that allows you to use both fill for the inside and color for the outline. This let's you to map two aesthetics to each point. All info on what number refers to which shape can be found [here](http://www.sthda.com/english/wiki/ggplot2-point-shapes).
+
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g, shape = sex)) +
+  geom_point()
+```
+
+Notice, since we can only add a shape to categorical data we would get an error if we want to add shapes for the different years (which, if we remember the output from `str(penguins)` are stored as integers). If we wanted to add shapes for different years, we first would have to convert the year to a factor.
+
+Feel free to try this without changing the year to a factor first.
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g, shape = factor(year))) +
+  geom_point()
+```
+
+Notice: When we run these, we see how the legend title is renamed to `factor(year)`. This is not how we want this and we will discuss at a later section @sec-change-legend how we can change this.
+
+
+
+
+### Alpha
+
+geom_point() has an alpha argument that controls the opacity of the points. A value of 1 (the default) means that the points are totally opaque; a value of 0 means the points are totally transparent (and therefore invisible). Values in between specify transparency.
+
+Changing the alpha is a good way to make overlapping data points better visible.
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
+  geom_point(alpha = 0.2)
+```
+
+
+
+
+## Position adjustments
+
+Position adjustments apply minor tweaks to the position of elements within a layer. There are three position adjustments that are primarily useful for `geom_point`:
+
+- `position_nudge()`: move points by a fixed offset.
+- `position_jitter()`: add a little random noise to every position.
+- `position_jitterdodge()`: dodge points within groups, then add a little random noise.
+
+By default, ggplot2 uses ``position = "identity" ``.  I.e. the code below is the same as if we only would write `geom_point()`:
+
+```{r}
+#use the default (what we have done before, without spelling it out)
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "identity")
+```
+
+If you look closely at the graph, there is a small issue with the data points  --> several points overlap but we can not see how many. We have seen before, that changing the alpha helps to show the data better. Another way to visualize this a bit better is to add random noise, a process that is also called jittering.
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter")
+```
+
+We can also exactly define the level of noise like using the `position_jitter()` function:
+
+```{r}
+posn_j <- position_jitter(0.1)
+
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = posn_j)
+
+```
+
+A small issue with jittering is that if we use the code above, we can not exactly reproduce the plot. So, if we would run the code again, the points will be at slightly different positions, since the noise is randomly generated each time we plot. However, we can control this, by setting a fixed value for our random seed. Now, everytime you run the plot below, we will get the exact same output.
+
+```{r}
+posn_j <- position_jitter(0.1, seed = 136)
+
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = posn_j)
+```
+
+
+
+## Geoms
+
+Geometric objects, or geoms for short, perform the actual rendering of the layer, controlling the type of plot that you create. Some useful geoms are: 
+
+- `geom_point()` produces a scatterplot. 
+- `geom_area(`) draws an area plot, which is a line plot filled to the y-axis (filled lines). Multiple groups will be stacked on top of each other.
+- `geom_bar()` and `geom_col` make bar charts. 
+- `geom_boxplot()` visualizes five summary statistics (the median, two hinges and two whiskers), and all "outlying" points individually.
+- `geom_violin()` shows density of values in each group.
+- `geom_line()` makes a line plot. geom_line() connects points from left to right; `geom_path()` is similar but connects points in the order they appear in the data. 
+- `geom_rect()`, `geom_tile()` and `geom_raster()` draw rectangles. geom_rect() is parameterised by the four corners of the rectangle, xmin, ymin, xmax and ymax. geom_tile() is exactly the same, but parameterised by the center of the rect and its size, x, y, width and height. geom_raster() is a fast special case of geom_tile() used when all the tiles are the same size. 
+- `geom_errorbar()` allows us to add error bars.
+
+Now, lets look at a few examples:
+
+
+### Barplots
+
+Classical barplots have a categorical x-axis and we can generate barplots using two geoms:  
+    - `geom_bar()`  = counts the number of cases at each x-position 
+    - `geom_col()` = plots the actual values
+
+
+#### Geom_bar
+
+Let's first count the number of observations we have for each penguin species.
+
+```{r}
+ggplot(penguins_clean, aes(species)) +
+  geom_bar()
+```
+
+We can also plot the counts in case they are already part of our data frame. To do this, lets first create a summary for our data using the tidyverse:
+
+```{r}
+peng_summary<- penguins_clean |> 
+  #select the variables we want to work with
+  select(species, flipper_length_mm) |> 
+  #group our data by species
+  group_by(species) |> 
+  #get summary stats
+  summarize(observations = n()) |> 
+  arrange(desc(observations))
+
+#view the data
+peng_summary
+```
+
+Now, lets plot the observations. You will notice that compared to the first time we used `geom_bar()` we added `stat = "identity"` to our geom. A statistical transformation, or stat, transforms the data, typically by summarizing it in some manner. Geom_bar by default uses `stat = "count"` to automatically count the number of observations without us having to write this out. If we instead want to provide values to geom_bar instead of letting it automatically count for us, we have to change this argument:
+
+```{r}
+ggplot(peng_summary, aes(x = species, y = observations)) +
+  geom_bar(stat = "identity")
+```
+Alternatively, we could use `geom_col`. `geom_col()` won't try to aggregate the data by default and it expects you to already have the y values calculated and to use them directly.  
+
+```{r}
+ggplot(peng_summary, aes(x = species, y = observations)) +
+  geom_col()
+```
+
+#### Addon: ordering data in barplots
+
+Now, another thing to keep in mind. When we generated the summary statistics, we ordered the data based on the number of observations but in the plot we see that the bars are ordered alphabetically by species name. 
+
+There are different ways to do change the order of our bar plot but the main thing we need to accomplish is to modify the factor levels of our ordering column. We can easily view the default order of our species by typing:
+
+```{r}
+levels(peng_summary$species)
+```
+
+We can re-order the factor levels either manually or using the forcats library that comes with the tidyverse and allows us to reorder factors. 
+
+Let's try plotting again but using` fct_reorder` function. For `fct_reorder`, we need to tell the function our factor variable ("species") and the values we want to reorder it by (the column corresponding to the y-axis, i.e. "observations").
+
+When using the function, the x-label gets renamed, so we use the labs function to use our preferred name. If you are unsure what this means, run the code without `labs(x = "Species")`.
+
+```{r}
+ggplot(peng_summary, aes(x = fct_reorder(species, observations), y = observations)) +
+  geom_col() +
+  labs(x = "Species")
+```
+
+We can easily change the order by adding an extra argument, `.desc = TRUE`:
+
+```{r}
+ggplot(peng_summary, aes(x = fct_reorder(species, observations, .desc = TRUE), y = observations)) +
+  geom_col() +
+  labs(x = "Species")
+```
+
+There are more ways that you can use forcats for to order data, but that's out of the scope of this tutorial. For more, feel free to start by having a look at the [forcats documentation](https://forcats.tidyverse.org/articles/forcats.html).
+
+
+
+#### Positions in barplots
+
+We have three different ways to adjust the positions of barplots:
+
+- `position_stack()`: stack overlapping bars (or areas) on top of each other.
+- `position_fill()`: stack overlapping bars, scaling so the top is always at 1.
+- `position_dodge()`: place overlapping bars (or boxplots) side-by-side.
+
+
+Lets first view the default of a stacked barplot by adding the color aesthetic:
+
+```{r}
+ggplot(penguins_clean, aes(x = year, fill = sex)) +
+  geom_bar()
+```
+
+By default, `geom_bar` produced a stacked barplot and we can change this behavior and plot proportional values by using `position=fill`:
+
+```{r}
+ggplot(penguins_clean, aes(x = year, fill = sex)) +
+  geom_bar(position = "fill")
+```
+
+To plot the values next to each other we can "dodge" the bars
+
+```{r}
+ggplot(penguins_clean, aes(x = year, fill = sex)) +
+  geom_bar(position = "dodge")
+```
+
+
+
+
+
+### Boxplots
+
+A boxplot is a standardized way of displaying the dataset based on the five summary statistics: the minimum, the maximum, the sample median, and the first and third quartiles. Additionally, `geom_boxplot` also will show any outliers
+
+```{r}
+ggplot(penguins_clean, aes(x = species, y = body_mass_g)) +
+  geom_boxplot()
+```
+
+We could easily add our individual datapoints to this plot by adding another layer. To avoid overplotting, we will not use geom_point, but geom_jitter to add small amount of random variation to the location of each point. Width controls the spread of the jitter.
+
+```{r}
+ggplot(penguins_clean, aes(x = species, y = body_mass_g)) +
+  geom_boxplot() + 
+  geom_jitter(width = 0.2)
+```
+
+Dodged boxplots are automatically generated when adding a factor aesthetic, :
+
+```{r}
+ggplot(penguins_clean, aes(x = species, y = body_mass_g, fill = factor(year))) +
+  geom_boxplot()
+```
+
+
+Something to watch out for: When generating a dodged boxplot, the width is automatically calculated by the total width of all elements in a position. If we add an aesthetic for the island (only Adelie is found on 3 different islands) then the width of each boxplot is not the same:
+
+```{r}
+ggplot(penguins_clean, aes(x = species, y = body_mass_g, fill = island)) +
+  geom_boxplot()
+```
+
+We can adjust this by preserving the width of a single element instead. We will go a bit more into position adjustments a bit later.
+
+```{r}
+ggplot(penguins_clean, aes(x = species, y = body_mass_g, fill = island)) +
+  geom_boxplot(position = position_dodge(preserve = "single"))
+```
+
+
+
+
+
+### Histograms
+
+A histogram displays numerical data by grouping data into "bins" of equal width.
+We need to only provide a single aesthetic, x, which needs to be a continuous variable.
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm )) +
+  geom_histogram() 
+```
+
+If we want to have smaller bins, we can change the width like this:
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm )) +
+  geom_histogram(binwidth = 5) 
+```
+
+Some things to keep in mind when visualizing histrograms:
+
+- Ensure that we set meaningful bin widths for the data
+- Don't show spaces between the bars
+- X-labels should fall between the bars as they represent intervals and not actual values
+
+The last point we can control with the center argument:
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm )) +
+  geom_histogram(binwidth = 2, center = 0.05) 
+```
+
+
+#### Use aesthethics in histrgrams
+
+We can fill the bars with different colors for our to see if these behave differently:
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm, fill = species)) +
+  geom_histogram(binwidth = 2, center = 0.05) 
+```
+
+However, a problem with this representation is that it is not immediately clear if the data is overlapping or if they are stacked on top of each other.
+
+- the default position of geom_histrogram() is using stacked bars. We can change this with the position argument.
+- We can also dodge the bars, i.e. to offset each data point in a given category.
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm, fill = species)) +
+  geom_histogram(binwidth = 2, center = 0.05, position = "dodge") 
+```
+
+- the fill position normalizes each bin to represent the proportion of all obeservations in each bin.
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm, fill = species)) +
+  geom_histogram(binwidth = 2, center = 0.05, position = "fill") 
+```
+
+
+
+
+### Line plots
+
+Line plots are ideal if we want to plot time series, such as the beaver data. The beaver data comes with two datasets, beaver1 and beaver2: records of temperature and activity over two different beavers measured over time.
+
+Let's first have a look at our data:
+
+```{r}
+head(beaver1)
+```
+
+```{r}
+str(beaver1)
+```
+
+```{r}
+summary(beaver1)
+```
+
+We have 114 temperature and activity observations collected over 2 days and different time intervals. If we do the same for `beaver2` we would see a very similar looking dataset.
+
+Let's start by plotting the temperature over the time interval:
+
+```{r}
+ggplot(beaver1, aes(x = time, y = temp)) +
+  geom_line()
+```
+
+We can add a second layer, by adding the activity data.
+
+```{r}
+ggplot(beaver1, aes(x = time, y = temp,
+                    color = activ)) +
+  geom_line()
+```
+
+
+
+#### Line plots for several species
+
+We can easily plot the data for both our beavers in one plot. To do this, let us first combine the data for beaver 1 and beaver 2:
+
+```{r}
+#add a new colum for the specimen for beaver1 and 2
+beaver1$species = "beaver1"
+beaver2$species = "beaver2"
+
+#combine the two datasets
+beaver_all <- rbind(beaver1, beaver2)
+
+#control the number of observations
+dim(beaver_all)
+```
+
+Now we can plot again, by distinguishing beaver1 and 2 by different types of lines:
+
+```{r}
+ggplot(beaver_all, aes(x = time, y = temp, linetype = species)) +
+  geom_line()
+```
+
+Instead of changing the line type, we can use different aesthetics, such as the color:
+
+```{r}
+ggplot(beaver_all, aes(x = time, y = temp, color = species)) +
+  geom_line()
+```
+
+
+
+
+### Geom_smoot and adding trendlines
+
+``geom_smooth()`` adds a smooth trend curve and as such aids the eye in seeing patterns in the presence of overplotting.
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
+  geom_point() +
+  geom_smooth()
+```
+
+We can also change the method on how the trend curve is calculated By default NULL is chosen, where the smoothing method is chosen based on the size of the largest group. We also see in the warning message, that by default this function uses loess as a method to draw the line with formulate y dependent on x. Loess is a non-parametric smoothing algorithm that usually is used when we have less than 1000 observations. It works by calculating a weighted mean by passing a sliding window along the x-axis and is a valuable tool in exploratory data analysis.
+
+
+We can change the function like this:
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+If you want to know more about how to change things and the math used, check the help function with ``?geom_smooth``.
+
+We can also calculate a trend line whilst using the color aesthethic:
+
+```{r}
+ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g, color = species )) + 
+  geom_point() +
+  geom_smooth(se = FALSE, method = "lm")
+```
+
+Notice, for all methods the line is calculated on groups defined by color.
+
+By default, each model is bound to the values of its own group. We can change this by defining the ``fullrange`` to make predictions over the full range of data.
+
+```{r}
+ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g, color = species )) + 
+  geom_point() +
+  geom_smooth(method = "lm", fullrange = TRUE)
+```
+
+
+#### Addon: Adding math
+
+This is a bit outside of the scope of this tutorial, so we won't cover details here, but since many of you might want to know how you add a regression equation and R2 you could to this quite easily with the help of another package ggpubr and one of its functions `stat_regline_equation`:
+
+```{r}
+library(ggpubr)
+```
+
+```{r}
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  stat_regline_equation(label.y = 6200, aes(label = after_stat(eq.label))) +
+  stat_regline_equation(label.y = 6000, aes(label = after_stat(rr.label)))
+```
+
+**Exercise**
+
+For the penguin data set plot the bill_length_mm against the flipper_length_mm and color based on the species. Add a trend curve as well using the lm method. When you do this, you will see this is not very pretty, we will learn latter how to improve this plot.
+
+
+```{r}
+#| code-fold: true
+#| eval: false
+
+ggplot(penguins_clean, aes(bill_length_mm, flipper_length_mm, color = species)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+
+
+## Facets
+
+The facet approach partitions a plot into a matrix of panels. Each panel shows a different subset of the data. Let's start by creating a histogram for different groups:
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm,  fill = species)) +
+  geom_histogram()
+```
+
+We have discussed before that this way, we don't know for sure if there is overplotting and discussed ways to better visualize this. A new one we want to discuss now is facetting.
+
+We can facet with one group in vertical direction:
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm)) +
+  geom_histogram() + 
+  facet_grid(species ~ .)
+```
+
+Or in horizontal direction:
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm)) +
+  geom_histogram() + 
+  facet_grid(. ~ species)
+```
+We can also facet two variables:
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm)) +
+  geom_histogram() + 
+  facet_grid(species ~ year)
+```
+By default, all the panels have the same scales and `scales="fixed"` is used in the back. While for a lot of things it makes sense to have the same scale, we can also make scales independent, by setting scales to free, free_x, or free_y.
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm)) +
+  geom_histogram() + 
+  facet_grid(species ~ year, scales = "free")
+```
+
+
+
+
+## Modifying scales and axes
+
+### Scale functions and transformations {#sec-change-legend}
+
+Scales control the details of how data values are translated to visual properties. We can override the default scales to tweak details like the axis labels or legend keys, or to use a completely different translation from data to aesthetic.
+
+I.e. some options to modify our x- and y-axis are:
+
+- scale_x_*()
+- scale_y_*()
+- scale_color_*()
+- scale_fill_*()
+- scale_shape_*()
+- scale_linetype_*()
+- scale_size_*()
+
+Importantly, we need to define the scales based on the type of data we have, continuous or discrete:
+
+- Discrete variables represent counts (e.g. the number of objects in a collection). 
+- Continuous variables represent measurable amounts (i.e. weight).
+
+To do this, we append either continous or discrete to the scale_:
+- scale_x_continous()
+- scale_color_discrete()
+
+An example were we add labels to the x an y axis and the legend for the color aesthetic. Notice, how the x and y-axis gets its own scale?
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  scale_y_continuous("Body mass (g)") +
+  scale_x_continuous("Flipper length (cm)") +
+  scale_color_discrete("Penguin species")
+```
+
+
+### Scale transformations
+
+When working with continuous data, the default is to map linearly from the data space onto the aesthetic space. It is possible to override this default using transformations. Every continuous scale takes a trans argument, allowing the use of a variety of transformations.
+
+Built in functions for axis transformations are :
+
+- scale_x_log10(), scale_y_log10() : for log10 transformation
+- scale_x_sqrt(), scale_y_sqrt() : for sqrt transformation
+- scale_x_reverse(), scale_y_reverse() : to reverse coordinates
+- coord_trans(x ="log10", y="log10") : possible values for x and y are "log2", "log10", "sqrt", …
+- scale_x_continuous(trans='log2'), scale_y_continuous(trans='log2') : another allowed value for the argument trans is 'log10'
+
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  scale_y_reverse() 
+```
+
+
+
+### Changing the axis limits
+
+Limits describes the range of a scale. There are different functions to set axis limits :
+
+- xlim() and ylim()
+- expand_limits()
+- scale_x_continuous() and scale_y_continuous()
+
+I.e. lets change the range:
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  ylim(0,6500)
+```
+
+expand_limits() can be used to quickly set the intercept of x and y axes at (0,0) and change the limits of x and y axes:
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  expand_limits(x=0, y=0)
+```
+
+We can also use the scale_x_continuous() and scale_y_continuous() to change x and y axis limits, respectively. Using these functions gives us the benefit that we can control more such as:
+
+- name : x or y axis labels
+- breaks : to control the breaks in the guide (axis ticks, grid lines, …). Among the possible values, there are :
+  - NULL : hide all breaks
+  - waiver() : the default break computation
+  - a character or numeric vector specifying the breaks to display
+- labels : labels of axis tick marks. Allowed values are :
+  - NULL for no labels
+  - waiver() for the default labels
+  - character vector to be used for break labels
+- limits : a numeric vector specifying x or y axis limits (min, max)
+- trans for axis transformations. Possible values are "log2", "log10", …
+
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  scale_x_continuous(limits = c(0,250)) +
+  scale_y_continuous(limits = c(0,7000))
+```
+
+If we wanted to control how the tick mark positions are broken up, we use the breaks argument. The argument used in the call are: start, end, steps:
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  scale_x_continuous(limits = c(0,250), 
+                     breaks = seq(0,250,25))
+```
+
+We can also Expand the range of the plot limits.To see what is happening compare the 0,0 position between the plot above and below.
+
+```{r}
+
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  scale_x_continuous(limits = c(0,250), 
+                     breaks = seq(0,250,25),
+                     expand = c(0,0)) 
+```
+
+The labels argument adjusts the category names and is an easy way if we want to beautify the legend.
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  scale_color_discrete("Penguin species", 
+                       labels = c("Ad", "Ch", "Ge"))
+```
+
+### The labs function
+
+Labs is another way that allows us to change the axis labels.
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  labs(x = "Flipper length (cm)" , 
+       y = "Body mass (g)",
+       color = "Penguins" )
+```
+
+
+
+### Adding a plot title with ggtitle
+
+We can also quickly add a title. If your title is extremely long, we can break it into several lines using `\n`
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  ggtitle("Comparing the body mass (g) and \nflipper length (mm) of three different penguin species")
+```
+
+
+
+### Defining our own colors
+
+There are many ways to decide how to assign colors. While we will not go into detail, we briefly want to discuss how we can manually change colors or uses existing color palettes.
+
+
+#### Using existing color palettes
+
+`scale_color_brewer` (and others) provide sequential, diverging and qualitative colour schemes. Some examples on how to use them are found [here](https://r-graph-gallery.com/ggplot2-color.html).
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  scale_color_brewer(palette = "Spectral")
+```
+
+
+
+#### Manually assigning colors
+
+With `scale_color_manual()` we can change the properties of the color scale . The first argument sets the legend title and for  the values argument we provide a named vector of colors to use.
+
+```{r}
+#lets start by defining some color vectors
+palette <- c(Gentoo = "#377EB8", Chinstrap = "#E41A1C", Adelie = "purple")
+palette2 <- c("#377EB8",  "#E41A1C", "purple")
+
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  scale_color_manual("Penguins", values = palette)
+```
+
+As an exercise, use palette2 instead of palette and see what happens.
+
+```{r, include=FALSE}
+#| code-fold: true
+#| eval: false
+#if we don't add the names to the color vector, we have less control over how colors are changed
+
+
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  scale_color_manual("Penguins", values = palette2)
+```
+
+When making your own color palettes you need to keep in mind:
+
+1. You need as many colors as you have categories (3 in our case)
+2. Depending on how you assign the colors, you might not have control over the order of the colors and need to watch out that the colors get assigned to the right species. 
+
+
+
+
+
+
+## Themes
+
+Themes allows us to control all non-data ink on your plot as well as all visual elements that are not part of your data,
+
+There are three types that can be modified with:
+
+- text, which can be modified using element_text()
+- line, which can be modified using element_line()
+- rectangle, which can be modified using element_rect()
+
+
+### Modifying text elements
+
+We can in general modify all text, titles, plot, legend, axes.
+
+Let's modify part of the axes, specifically the color of the axis title. For this, we access the axis.title via the theme function and change text theme element. Additionally, we want to capitalize the species name:
+
+```{r}
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  theme(axis.title = element_text(color = "blue"))
+```
+
+We can change specific parts in an hierarchical manner.
+
+![](C:/Users/ndmic/WorkingDir/Notebooks/Pictures/ggplot2.png){width=50% fig-align="left"}
+
+For example, when using axis.title, we change both, the x- and y-axis. With axis.title.x we only change the x-axis and so on.
+
+
+### Modify lines
+
+Lines are the axis lines as well as the tick marks or the lines around the plot. Same as for text, this is changed in an hierarchical manner.
+
+<p align="left">
+  <img width=400, height=400, src="C:/Users/ndmic/WorkingDir/Notebooks/Pictures/ggplot3.png">
+</p>
+
+As an example, lets change the color of the x axis line:
+
+```{r}
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) + 
+  theme(axis.line.x = element_line(color = "blue"))
+```
+
+
+
+### element_blank()
+
+We can use ``element_blank()`` to remove any item of a plot. If you are unsure what is removed in each theme, feel free to try the code by removing individual themes.
+
+```{r}
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) + 
+  theme(line = element_blank(),
+        rect = element_blank(),
+        text = element_blank())
+```
+
+### Moving the legend
+
+Legend positions can be changed via ``legend.position``. Here, we can use the following:
+
+- "top", "bottom", "left", or "right'": place it at that side of the plot.
+- "none": don't draw it.
+- We can provide exact positions, using c(x, y): here, c(0, 0) means the bottom-left and c(1, 1) means the top-right.
+
+As an exercise, 
+
+1. try to remove the legend.
+2. add the legend at the bottom of the plot
+3. position the legend with x at 0.6 and y at 0.1
+
+```{r}
+#| code-fold: true
+#| eval: false
+
+#question 1
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) + 
+  theme(legend.position = "none")
+
+#question 2
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) + 
+  theme(legend.position = "bottom")
+
+#question 3
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) + 
+  theme(legend.position = c(0.6, 0.1))
+```
+
+
+### Modifying theme elements
+
+Many plot elements have multiple properties that can be set. For example, line elements in the plot such as axes and grid lines have a color, a thickness (size), and a line type (solid line, dashed, or dotted). To set the style of a line, you use `element_line()`.
+
+Below, we will go through a few examples but for a full list of options, go [here](https://ggplot2.tidyverse.org/reference/theme.html#ref-examples).
+
+For example, we can give all rectangles (via ``panel.background``) in the plot (the rect element) a "white" fill and grey line color and remove the ``legend.key``s outline by setting its color to be missing (NA)
+
+```{r}
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) + 
+  theme(panel.background = element_rect(fill = "white", color = "grey"),
+        legend.key = element_rect(fill = NA) )
+```
+
+We can also remove the axis ticks (``axis.ticks``) by making them a blank element and remove the panel gridlines, ``panel.grid`` in the same way.
+
+```{r}
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  theme(axis.ticks = element_blank(),
+        panel.grid = element_blank())
+```
+
+If we wanted to at least add the major gridlines back to the plot above we would do the following. 
+
+```{r}
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  theme(axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        panel.grid.major = element_line(color = "black", size = 0.5, linetype = "dotted"))
+```
+
+We can also easily change the text. For example, let us make the ``axis.text``, less prominent by changing the color to "grey". Additionally, lets add a title and increase the ``plot.title``'s, size to 16 and change its font face to "italic".
+
+
+```{r}
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  ggtitle("Penguins are fun") +
+  theme(axis.text = element_text(color = "grey"),
+        plot.title = element_text(size = 16, face = "italic"))
+```
+
+
+
+### Modify white space
+
+When talking about Whitespace, we talk about all the non-visible margins and spacing in the plot.
+
+To set a single whitespace value, use unit(x, unit), where x is the amount and unit is the unit of measure. The default unit is "pt" (points), which scales well with text. Other options include "cm", "in" (inches) and "lines" (of text). If you want to have a list of all possible units type `?grid::unit`
+
+For example, we could make longer axis ticks like this:
+
+```{r}
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  theme(axis.ticks.length = unit(12, "points"))
+```
+
+Borders require you to set 4 positions, so use margin(top, right, bottom, left, unit). To remember the margin order, think TRouBLe. We set the ``legend.margin`` to 20 points ("pt") on the top, 30 pts on the right, 40 pts on the bottom, and 50 pts on the left like this:
+
+```{r}
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  theme(legend.margin = margin(20,30,40,50, "pt"))
+```
+
+As an exercise:
+
+1. Give the legend key size, ``legend.key.size``, a unit of 3 centimeters ("cm").
+2. Set the plot margin,``plot.margin``, to 10, 30, 50, and 70 millimeters ("mm").
+
+```{r}
+#| code-fold: true
+#| eval: false
+#question1
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  theme(legend.key.size = unit(3, "cm"))
+
+#question2
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  theme(plot.margin = margin(10,30,50,70, "mm"))
+```
+
+
+### Modifying facets
+
+With strip we can change the appearance of facets. Let's change the facet text font and the box.
+
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm)) +
+  geom_histogram() + 
+  facet_grid(species ~ year, scales = "free") +
+  theme(strip.text = element_text(size=12, face="bold"),
+        strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+```
+
+
+## Theme flexibility
+
+Ways to use themes:
+
+- From scatch (as shown above)
+- using theme layer objects
+- using build-in themes (from ggplot)
+- using build-in themes (from other packages)
+
+
+### Make your own themes
+
+For now, let's have a look at the second point. Making our on themes is useful for consistency across several plots.
+
+Let's look at one of the plots we have done before and lets store it in the variable **z**. In the next step, we can add some custom themes to z:
+
+```{r}
+z <-
+  ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  scale_x_continuous("Bill_length (cm)") +
+  scale_y_continuous("Body weight (g)") +
+  scale_color_brewer("Penguins", palette = "Dark2", labels = c("Ad", "Ch", "Ge"))
+
+z
+```
+
+Now, lets change some themes to make our plot a bit more professional looking. 
+
+```{r}
+z + theme(text = element_text(family = "serif", size = 14),
+          rect = element_blank(),
+          panel.grid = element_blank(),
+          axis.line = element_line(color = "black"))
+
+```
+
+Now, lets define a theme that we can reuse.
+
+```{r}
+theme_pengs <- theme(text = element_text(family = "serif", size = 14),
+          rect = element_blank(),
+          panel.grid = element_blank(),
+          axis.line = element_line(color = "black"))
+```
+
+Use our new theme for the plot.
+
+```{r}
+z + theme_pengs
+```
+
+The useful thing of doing things this way, is that we can also apply this theme to any other plot. For example, lets apply it to the plot below
+
+```{r}
+m <- ggplot(penguins_clean, aes(x = body_mass_g)) +
+  geom_histogram() +
+  scale_x_continuous(expand = c(0,0))+
+  scale_y_continuous(expand = c(0,0)) 
+
+m
+```
+
+Now, we can add our theme like this
+
+```{r}
+m + theme_pengs
+```
+
+We still can modify themes by adding another theme layer, which will over-write previous settings.
+
+
+```{r}
+m + 
+  theme_pengs +
+  theme(axis.line.x = element_blank())
+```
+
+### Accessing build in themes
+
+Use ``theme_*()`` to access built-in themes. A full list of themes can be found [here](https://ggplot2.tidyverse.org/reference/ggtheme.html). In general the following build in themes might be useful to get started:
+
+- theme_gray() is the default.
+- theme_bw() is useful when you use transparency.
+- theme_classic() is more traditional.
+- theme_void() removes everything but the data.
+
+
+```{r}
+z +
+  theme_classic()
+```
+
+Again, we can modify every specific element we want. 
+
+```{r}
+z +
+  theme_classic() +
+  theme(text = element_text(family = "serif"))
+```
+
+
+#### Exercises
+
+1. Add a black and white theme, theme_bw(), to the penguin plot.
+2. Add a classic theme, theme_classic(), to the plot
+3. Add a void theme, theme_void(), to the plot.
+
+```{r}
+#| code-fold: true
+#| eval: false
+#question 1
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  theme_bw()
+
+#question 2
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  theme_classic()
+
+#question 3
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  theme_void()
+
+```
+
+
+
+
+
+
+
+
+
