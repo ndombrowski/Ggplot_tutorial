@@ -116,7 +116,7 @@ Since we can see that the penguin dataset has rows with missing data, our first 
 
 :::{.callout-important}
 
-If you are working in base R you might have an error when using `|>` if you are working an R version below 4.1. If you get an error and can't update or don't want to update R use `%>%` instead. For this to work, you need to have the tidyverse library loaded.
+If you are working in base R you might have an error when using `|>` if you are working with an R version below 4.1. If you get an error and can't update or don't want to update R use `%>%` instead. For this to work, you need to have the tidyverse library loaded.
 
 :::
 
@@ -902,28 +902,59 @@ ggplot(penguins_clean, aes(bill_length_mm,  fill = species)) +
 
 We have discussed before that this way, we don't know for sure if there is over plotting and discussed ways to better visualize this. A new one we want to discuss now is faceting.
 
-We can facet with one group in vertical direction by adding another layer with `facet_grid()`:
+We can facet with one group in vertical direction, or by rows, by adding another layer with `facet_grid()`:
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm)) +
+  geom_histogram() + 
+  facet_grid(rows = vars(species))
+```
+
+:::{.callout-note}
+ggplot2 before version 3.0.0 used formulas to specify how plots are faceted. If you encounter facet_grid/wrap() code containing `~` then this has been changed to give the user more flexibility in creating functions.
+
+So the above could also be written as:
 
 ```{r}
 ggplot(penguins_clean, aes(bill_length_mm)) +
   geom_histogram() + 
   facet_grid(species ~ .)
 ```
+While the older version to write the code is a lot shorter it is also not as explicit in terms of what gets plotted where.
 
-Or in horizontal direction:
+:::
+
+
+We can also change the plot to horizontal direction, i.e. by column:
 
 ```{r}
 ggplot(penguins_clean, aes(bill_length_mm)) +
   geom_histogram() + 
-  facet_grid(. ~ species)
+  facet_grid(cols = vars(species))
 ```
 
-We can also facet using two variables:
+We can also facet using two variables at the same time:
 
 ```{r}
 ggplot(penguins_clean, aes(bill_length_mm)) +
   geom_histogram() + 
-  facet_grid(species ~ year)
+  facet_grid(rows = vars(species, year))
+```
+
+Or we can facet both by columns and rows:
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm)) +
+  geom_histogram() + 
+  facet_grid(rows = vars(species), cols = vars(year))
+```
+
+`facet_grid` by default assumes that we provide the rows and then the columns. So a shorter way to write this is:
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm)) +
+  geom_histogram() + 
+  facet_grid(vars(year), vars(species))
 ```
 
 By default, all the panels have the same scales and `scales="fixed"` is used in the background. While for a lot of things it makes sense to have the same scale, we can also make scales independent, by setting scales to free, free_x, or free_y.
@@ -931,7 +962,7 @@ By default, all the panels have the same scales and `scales="fixed"` is used in 
 ```{r}
 ggplot(penguins_clean, aes(bill_length_mm)) +
   geom_histogram() + 
-  facet_grid(species ~ year, scales = "free")
+  facet_grid(cols = vars(year), rows = vars(species), scales = "free")
 ```
 
 
@@ -941,7 +972,7 @@ This is just an example showing the amount of flexibility you have with ggplot. 
 
 ```{r}
 #duplicate our dataframe but remove the column we want to use to facet
-#this way facet_grid won't separate the points by species for this datafram
+#this way facet_grid won't separate the points by species for this dataframe
 df2 <- penguins_clean |> 
   select(-species)
 
@@ -951,17 +982,17 @@ ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g )) +
   #assign the species to the color aesthetic
   geom_point(aes(color = species)) +
   #facet the data
-  facet_grid(. ~ species)
+  facet_grid(cols = vars(species))
 ```
 
 
 
 **Exercise**:
 
-1. Generate a scatterplot comparing the bill length and body mass. Add a trendline (color the trendline in grey) and use facet_grid to create subplots for different species. Its up to you whether you prefer a horizontal or vertical orientation.
+1. Generate a scatterplot comparing the bill length and body mass. Add a trendline (color the trend line in grey) and use facet_grid to create subplots for different species. Its up to you whether you prefer a horizontal or vertical orientation.
 2. Do the same as above but allow each facet to use a different scale.
 3. Generate a histogram showing the body weight. Use facet_grid to generate subplots for different islands and species.
-4. Do the same as in exercise 3 but use facet_wrap instead. Do you see how the behave differently?
+4. Do the same as in exercise 3 but use facet_wrap instead. Beware, facet_wrap uses a slightly different syntax, try to figure out what you need to change by using the help function. Once you generated the plot, do you see how the behave differently?
 
 <details>
     <summary>Click me to see an answer</summary>
@@ -971,7 +1002,7 @@ ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g )) +
 ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g )) + 
   geom_point() +
   geom_smooth(method = "lm", color = "grey") + 
-  facet_grid(. ~ species)
+  facet_grid(cols = vars(species))
 ```
 
 ```{r}
@@ -979,21 +1010,21 @@ ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g )) +
 ggplot(penguins_clean, aes(x =bill_length_mm, y = body_mass_g )) + 
   geom_point() +
   geom_smooth(method = "lm", color = "grey") + 
-  facet_grid(. ~ species, scales = "free")
+  facet_grid(cols = vars(species), scales = "free")
 ```
 
 ```{r}
 #question3
 ggplot(penguins_clean, aes(body_mass_g)) +
   geom_histogram() + 
-  facet_grid(species ~ island)
+  facet_grid(cols = vars(species), rows = vars(island))
 ```
 
 ```{r}
 #question4
 ggplot(penguins_clean, aes(body_mass_g)) +
   geom_histogram() + 
-  facet_wrap(species ~ island)
+  facet_wrap(vars(species, island))
 ```
 
 </details>
