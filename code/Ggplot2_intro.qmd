@@ -44,7 +44,7 @@ Visualizing data is important not only for publishing but also to explore our da
 
 ![](C:/Users/ndmic/WorkingDir/Notebooks/Pictures/ggplot1.png){width=50% fig-align="left"}
 
-This tutorial was prepared with the following dependecies:
+This tutorial was prepared in RStudio with the following dependencies:
 
 - R version 4.2.
 - The palmerpenguins_0.1.1  package
@@ -61,10 +61,16 @@ If you don't have the palmerpenguins data set and the tidyverse downloaded then 
 ```{r}
 #| eval: false
 
-#install required data package and libraries
-remotes::install_github("allisonhorst/palmerpenguins")
+#install required data package and libraries(you only need to do this once)
+#the second install might take a bit
+install.packages("palmerpenguins")
 install.packages("tidyverse")
 ```
+
+Notice:
+
+If you are opening the notebook version (i.e. the qmd file) of this tutorial, you will sometimes see a little comment before the actual code, i.e. `#| eval: false`. This comment simply controls how the code chunk behaves when rendering the document to a HTML and can be ignored when following the tutorial.
+
 
 ```{r}
 #load packages
@@ -107,6 +113,12 @@ summary(penguins)
 After our first data exploration steps, we can see that we have eight columns with different variables, such as species, bill length or year. For each data column we got a summary of the number of observations (for factor data) as well as basic statistics for all numerical data. Another useful piece of information we get is the number of missing values for each column. 
 
 Since we can see that the penguin dataset has rows with missing data, our first task is to remove any row with missing data:
+
+:::{.callout-important}
+
+If you are working in base R you might have an error when using `|>` if you are working an R version below 4.1. If you get an error and can't update or don't want to update R use `%>%` instead. For this to work, you need to have the tidyverse library loaded.
+
+:::
 
 ```{r}
 #discard rows with NAs
