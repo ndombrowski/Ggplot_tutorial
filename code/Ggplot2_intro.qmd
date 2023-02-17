@@ -1691,15 +1691,22 @@ theme_manual <-
 ```
 
 
+We can easily add a table on top of our plot:
+
 ```{r}
+#| fig-width: 7
+
 #generate summary statistics
+#we use rename to prettify the column header
+#and use round to not display any digits when we calculate the mean
 summary <- penguins_clean |> 
   group_by(species) |> 
-  summarise(avg_body_mass = mean(body_mass_g))
+  summarise(avg_body_mass = round(mean(body_mass_g),0)) |> 
+  rename(Species = species, `Mean body\n mass (g)` = avg_body_mass)
 
 #generate a tibble from our dataframe
 #the positions will later be used to place our table in the plot 
-data.tb <- tibble(x = 0, y = 6400, tb = list(summary))
+data.tb <- tibble(x = 30, y = 6400, tb = list(summary))
 
 #generate a dot plot and add summary stats
 ggplot(penguins_clean, aes(bill_length_mm, body_mass_g)) +
@@ -1707,60 +1714,63 @@ ggplot(penguins_clean, aes(bill_length_mm, body_mass_g)) +
   geom_table(data = data.tb, aes(x, y, label = tb)) +
   geom_point(alpha = 0.5)  +
   theme_manual +
-  ylim(0,6500) + 
-  xlim(0,65)
+  ylim(NA,6500) + 
+  xlim(NA,65)
 ```
 
-We can also insert plots with `geom_plot_npc()`
+Or a plot:
+
 
 ```{r}
+#| fig-width: 7
+
 #generate a boxplot and store it in a variable
 boxplot <-
-ggplot(penguins_clean, aes(species, bill_depth_mm )) +
+ggplot(penguins_clean, aes(species, body_mass_g, fill = species )) +
   geom_boxplot() +
   theme_bw(base_size = 8) + 
   theme(legend.position = "none",
-        panel.grid = element_blank())
+        panel.grid = element_blank(),
+        axis.title = element_blank())
+
+#convert to tibple
+data.tb <- tibble(x = 20, y = 6400, 
+                  plot = list(boxplot))
 
 #generate a scatter plot and add the boxplot in an additional layer
-ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm, color = species)) + 
-  geom_point() + 
-  theme_manual +
-  annotate("plot_npc", npcx = "left", npcy = "bottom", label = boxplot) +
-  ylim(0,24) + 
-  xlim(0,62)
-
+ggplot(penguins_clean, aes(bill_length_mm,body_mass_g , color = species)) + 
+  geom_point() +
+  geom_plot(data = data.tb, aes(x, y, label = plot)) +
+  theme_manual 
 ```
-
-
-
-We can zoom into plots:
+We also can zoom into plots:
 
 ```{r}
 p <-
-ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm)) +
+ggplot(penguins_clean, aes(bill_length_mm, body_mass_g)) +
   geom_point(alpha = 0.5) +
-  ylim(0,30) + 
-  xlim(0,65)
+  ylim(NA,6500) + 
+  xlim(NA,65)
 
 data.tb <- 
-  tibble(x = 80, y = 30, 
+  tibble(x = 90, y = 2500, 
          plot = list(p + 
                        coord_cartesian(xlim = c(49, 61), 
-                                       ylim = c(13, 21)) +
+                                       ylim = c(5000, 6400)) +
                        labs(x = NULL, y = NULL) +
                        theme_bw(8) +
                        scale_colour_discrete(guide = "none")))
 
-ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm)) +
+ggplot(penguins_clean, aes(bill_length_mm, body_mass_g)) +
   geom_plot(data = data.tb, aes(x, y, label = plot)) +
   annotate(geom = "rect", 
-           xmin = 49, xmax = 61, ymin = 13, ymax = 21,
+           xmin = 49, xmax = 61, ymin = 5000, ymax = 6400,
            linetype = "dotted", fill = NA, colour = "black") +
   geom_point() +
-  annotate("segment",  x = 49, xend = 59.5, y = 21, yend = 29.5, linetype = "dotted") +
-  annotate("segment",  x = 61, xend = 79, y = 13, yend = 23, linetype = "dotted") +
-  theme_manual
+  annotate("segment",  x = 49, xend = 65, y = 5000, yend = 2700, linetype = "dotted") +
+  annotate("segment",  x = 61, xend = 89, y = 6400, yend = 4200, linetype = "dotted") +
+  theme_manual + 
+  scale_x_continuous(breaks = seq(0,60,10))
 ``` 
 
 
