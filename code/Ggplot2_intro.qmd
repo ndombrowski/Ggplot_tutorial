@@ -886,6 +886,38 @@ Going into the stats is outside the scope of this tutorial but feel free to chec
 
 
 
+### Annotations layer
+
+`annotate()` adds a geom to a plot but unlike a typical geom function, the properties of the geoms are not mapped from variables of a data frame, but are instead passed in as vectors. This is useful for adding small annotations (such as text labels) or if you have your data in vectors, and for some reason don't want to put them in a data frame.
+
+We can add text:
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm   )) +
+  geom_point(alpha = 0.5) +
+  annotate("text", x = 58, y = 10, label = "some text")
+```  
+
+Rectangles to highlight things:
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm   )) +
+  geom_point(alpha = 0.5) +
+  annotate("rect", xmin = 50, xmax = 60, ymin = 10, ymax = 12, alpha = .2)
+``` 
+
+
+Or even highlight sections:
+
+```{r}
+ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm   )) +
+  geom_point(alpha = 0.5) +
+  annotate("segment",  x = 35, xend = 50, y = 12.5, yend = 22, colour = "purple") 
+``` 
+
+
+
+
 ## Facets
 
 Facets partition a plot into a matrix of panels. Each panel shows a different subset of the data. 
@@ -1315,6 +1347,7 @@ Lines are the axis lines as well as the tick marks or the lines around the plot.
   <img width=400, height=400, src="C:/Users/ndmic/WorkingDir/Notebooks/Pictures/ggplot3.png">
 </p>
 
+
 As an example, let us change the color of the x axis line:
 
 ```{r}
@@ -1424,6 +1457,18 @@ ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species
         plot.title = element_text(size = 16, face = "italic"))
 ```
 
+Another useful thing: We can increase the distance between axis title and the plot my increasing the margins:
+
+```{r}
+ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species  )) +
+  geom_jitter(alpha =0.6) +
+  ggtitle("Penguins are fun") +
+  theme(axis.title.x = element_text(margin=margin(t=10)),
+        axis.title.y = element_text(margin=margin(r=10)),
+        axis.text = element_text(color = "grey"),
+        plot.title = element_text(size = 16, face = "italic"))
+```
+
 
 
 ### Modify white space
@@ -1492,7 +1537,7 @@ ggplot(penguins_clean, aes(bill_length_mm)) +
 
 Ways to use themes:
 
-- From scatch (as shown above)
+- From scratch (as shown above)
 - using theme layer objects
 - using build-in themes (from ggplot)
 - using build-in themes (from other packages)
@@ -1582,6 +1627,13 @@ Use ``theme_*()`` to access built-in themes. A full list of themes can be found 
 z +
   theme_classic()
 ```
+Custom themes have a convenient way to change ALL text and make things a bit bigger (often useful for presentations): 
+
+```{r}
+z +
+  theme_classic(base_size = 12)
+```
+
 
 Again, we can modify every specific element we want. 
 
@@ -1612,6 +1664,103 @@ ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species
 
 
 
+## Playground
 
+The code below is outside of the tutorial but will list any other package that is can be useful to use in combination with ggplot.
+
+### GGPP
+
+[ggpp](https://docs.r4photobiology.info/ggpp/articles/grammar-extensions.html#geom_plot) is a relatively new package that allows us to further modify plots using tibbles:
+
+We can add summary plots into a figure by installing and loading two new libraries first:
+
+```{r}
+library(tibble)
+library(ggpp)
+library(ggpubr)
+```
+
+```{r}
+#store a custom theme that we want to use for all plots in a variable
+#theme_pupr is part of the ggpupr package
+theme_manual <- 
+  theme_pubr(base_size = 10) +
+  theme(legend.position = "right",
+        axis.title.x = element_text(margin=margin(t=10)),
+        axis.title.y = element_text(margin=margin(r=10)))
+```
+
+
+```{r}
+#generate summary statistics
+summary <- penguins_clean |> 
+  group_by(species) |> 
+  summarise(avg_body_mass = mean(body_mass_g))
+
+#generate a tibble from our dataframe
+#the positions will later be used to place our table in the plot 
+data.tb <- tibble(x = 0, y = 6400, tb = list(summary))
+
+#generate a dot plot and add summary stats
+ggplot(penguins_clean, aes(bill_length_mm, body_mass_g)) +
+  #geom_table allows to plot a df or tibble
+  geom_table(data = data.tb, aes(x, y, label = tb)) +
+  geom_point(alpha = 0.5)  +
+  theme_manual +
+  ylim(0,6500) + 
+  xlim(0,65)
+```
+
+We can also insert plots with `geom_plot_npc()`
+
+```{r}
+#generate a boxplot and store it in a variable
+boxplot <-
+ggplot(penguins_clean, aes(species, bill_depth_mm )) +
+  geom_boxplot() +
+  theme_bw(base_size = 8) + 
+  theme(legend.position = "none",
+        panel.grid = element_blank())
+
+#generate a scatter plot and add the boxplot in an additional layer
+ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm, color = species)) + 
+  geom_point() + 
+  theme_manual +
+  annotate("plot_npc", npcx = "left", npcy = "bottom", label = boxplot) +
+  ylim(0,24) + 
+  xlim(0,62)
+
+```
+
+
+
+We can zoom into plots:
+
+```{r}
+p <-
+ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm)) +
+  geom_point(alpha = 0.5) +
+  ylim(0,30) + 
+  xlim(0,65)
+
+data.tb <- 
+  tibble(x = 80, y = 30, 
+         plot = list(p + 
+                       coord_cartesian(xlim = c(49, 61), 
+                                       ylim = c(13, 21)) +
+                       labs(x = NULL, y = NULL) +
+                       theme_bw(8) +
+                       scale_colour_discrete(guide = "none")))
+
+ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm)) +
+  geom_plot(data = data.tb, aes(x, y, label = plot)) +
+  annotate(geom = "rect", 
+           xmin = 49, xmax = 61, ymin = 13, ymax = 21,
+           linetype = "dotted", fill = NA, colour = "black") +
+  geom_point() +
+  annotate("segment",  x = 49, xend = 59.5, y = 21, yend = 29.5, linetype = "dotted") +
+  annotate("segment",  x = 61, xend = 79, y = 13, yend = 23, linetype = "dotted") +
+  theme_manual
+``` 
 
 
