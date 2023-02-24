@@ -23,9 +23,7 @@ code-block-bg: true
 code-block-border-left: "#31BAE9"
 editor_options: 
   chunk_output_type: inline
- 
 ---
-
 
 ```{r}
 #| echo: false
@@ -35,14 +33,15 @@ knitr::opts_chunk$set(eval=TRUE, cache=FALSE, message=FALSE, warning=FALSE,
                       comment = "", results="markup")
 ```
 
-
 ## Introduction
 
 This tutorial will introduce the basics of plotting with ggplot.
 
-Visualizing data is important not only for publishing but also to explore our data. For example, while a regression analysis might say that we have correlated data, there might be issues with outliers and so on, which we only see when plotting the data. For example in the plot below, we have the exact same regression line but the data points behave very differently. This example highlights how important it is to explore data using visualizations to spot problems within our datasets.
+Visualizing data is important not only for publishing but also to explore our data. For example, imagine that we do a regression analysis and we get the result two variables (i.e. weight and income) are positively correlated. While this might be an exciting result, without visualizing the data we might miss issues with outliers or don't see that are data points are not distributed normally. That is why plotting the data is so important. For example in the plot below, we have the exact same regression line but the data points behave very differently.
 
 ![](C:/Users/ndmic/WorkingDir/Notebooks/Pictures/ggplot1.png){width=50% fig-align="left"}
+
+## Setting up the working directory
 
 This tutorial was prepared in RStudio with the following dependencies:
 
@@ -50,13 +49,14 @@ This tutorial was prepared in RStudio with the following dependencies:
 - The palmerpenguins_0.1.1  package
 - The tidyverse_1.3.2 package 
 
-
-
-## Setting up the working directory
+:::{.callout-tip}
+## Notice: 
+If you are opening the notebook version (i.e. the qmd file) of this tutorial, you will sometimes see a little comment before the actual code, i.e. `#| eval: false`. This comment simply controls how the code chunk behaves when rendering the document to a HTML and can be ignored when following the tutorial via the qmd file.
+:::
 
 If you want to follow this tutorial, then you need to install some tools first. Specifically, we need to download the data set that we will explore today as well as the tidyverse library (which includes several packages such as dplyr for data transformation or ggplot, our plotting library). 
 
-If you don't have the palmerpenguins data set and the tidyverse downloaded then you can type the following into your R notebook or console:
+If you don't have the palmerpenguins data set and the tidyverse installed yet then you can type the following into your R notebook or console:
 
 ```{r}
 #| eval: false
@@ -66,11 +66,6 @@ If you don't have the palmerpenguins data set and the tidyverse downloaded then 
 install.packages("palmerpenguins")
 install.packages("tidyverse")
 ```
-
-Notice:
-
-If you are opening the notebook version (i.e. the qmd file) of this tutorial, you will sometimes see a little comment before the actual code, i.e. `#| eval: false`. This comment simply controls how the code chunk behaves when rendering the document to a HTML and can be ignored when following the tutorial.
-
 
 ```{r}
 #load packages
@@ -84,7 +79,7 @@ library(palmerpenguins)
 During this tutorial we will work with two datasets:
 
 - the palmerpenguins dataset, a data set that records details of 344 penguins. This will be the main data set we will explore.
-- The beaver dataset, a time series recording the temperature and activity of two beavers. Time-series are best represented in line plots and we will explore this data when talking about these types of plots.
+- The beaver dataset, a time series recording the temperature and activity of two beavers. This dataset is part of base R and doesn't need to be installed. Time-series are best represented in line plots and we will explore this data when talking about these types of plots.
 
 Let's have a first look at the penguin dataset and let us first have a look at the first few rows:
 
@@ -93,16 +88,27 @@ Let's have a first look at the penguin dataset and let us first have a look at t
 head(penguins)
 ```
 
-Notice:
-
+:::{.callout-tip}
+## Notice: 
 If you are viewing the HTML version, you can see all columns of the table above by clicking on the little arrow on the top, right corner of the table. 
+:::
 
-Next, let's explore the data structure (`str` let's us know if your columns are factors, integers or numbers):
+We see that we have 8 column of data, with different categorical data (species, sex and island) as well as different numerical measurements.
+
+Next, let's explore the data structure (`str` let's us know if our columns are factors, integers or numbers):
 
 ```{r}
 #view the data structure of the penguin data
 str(penguins)
 ```
+
+Some key features we can take from this:
+
+- The total amount of data we work with, i.e. 344 rows and 8 columns of data 
+- Te names and content of all 8, i.e. species, bill_length and sex
+- The type of data we have for each columns, i.e. factors, numeric/integer, character
+- The unique levels for some variables, i.e. we compare 3 different penguin species
+- If we look closely, we can see whether or not we have to worry about NAs (i.e. missing data). For example, we see an NA in the sex column.
 
 Finally, let's calculate a basic summary of our data:
 
@@ -112,13 +118,7 @@ summary(penguins)
 
 After our first data exploration steps, we can see that we have eight columns with different variables, such as species, bill length or year. For each data column we got a summary of the number of observations (for factor data) as well as basic statistics for all numerical data. Another useful piece of information we get is the number of missing values for each column. 
 
-Since we can see that the penguin dataset has rows with missing data, our first task is to remove any row with missing data:
-
-:::{.callout-important}
-
-If you are working in base R you might have an error when using `|>` if you are working with an R version below 4.1. If you get an error and can't update or don't want to update R use `%>%` instead. For this to work, you need to have the tidyverse library loaded.
-
-:::
+Since we can see that the penguin dataset has rows with missing data (i.e. NA), our first task is to remove any row with missing data:
 
 ```{r}
 #discard rows with NAs
@@ -134,6 +134,11 @@ print(dim(penguins))
 print(dim(penguins_clean))
 ```
 
+:::{.callout-important}
+If you are working in base R you might have an error when using `|>` if you are working with an R version below 4.1. If you get an error and can't update or don't want to update R use `%>%` instead. For this to work, you need to have the tidyverse library loaded.
+:::
+
+
 :::{.callout-note}
 Sanity checks are an important step when manipulating data and we recommend to always do them.
 
@@ -143,11 +148,11 @@ In the example above, we check the number of dimension of our data frame before 
 
 ## Our first scatterplot
 
-Now we can start to generate our first plot. Let's start with a scatterplot. In the code below you see the following:
+Now we can start to generate our first plot. Let's start with a scatterplot. In the code below we:
 
-1. In the first line of the code we initialize the plot using the `ggpplot`function. We provide the input dataframe (i.e. penguins_clean) and we also  
+1. Initialize the plot using the `ggpplot`function in the first line of code. We provide the input dataframe (i.e. penguins_clean) and we also  
 2. map variables (i.e. flipper_length_mm and body_mass_g) to the aes(thetics) in our graph. More specifically, we define what we want to plot on the x- and/or y-axes.
-3. In the second line of code, we define how we want to plot our data, i.e. in the example below we want to generate a scatterplot via ``geom_point()``. When using the `+` symbol after the first ggplot call, we add a layer to our plot. We can add as many layers to our plot as we want, more on that later.
+3. Define e how we want to plot our data in the second line of code. In the example we generate a scatterplot via ``geom_point()``. When using the `+` symbol after the first ggplot call, we add a **layer** to our plot. We can add as many layers to our plot as we want, more on that later.
 
 
 ```{r}
@@ -170,58 +175,147 @@ therefore, its important to find a good balance between keeping code short but r
 
 **Exercise**
 
-Plot the body mass on the y-axis and the species on the x-axis and generate a scatterplot.
+1. Plot bill length on the x and bill depth on the y-axis.
+2. Plot the body mass on the y-axis and the species on the x-axis and generate a plot. Notice a difference?
 
 <details>
     <summary>Click me to see an answer</summary>
+
+**Question 1**
+
+```{r}
+ggplot(penguins_clean, aes(x = bill_length_mm , y = bill_depth_mm )) + 
+  geom_point()
+```
+
+**Question 2**
 
 ```{r}
 ggplot(penguins_clean, aes(x = species, y = body_mass_g)) + 
   geom_point()
 ```
-Notice:  
 
-In this example we generate a dot instead of a scatter plot.  
-This plot is not ideal since points are on top of each other but we later learn how we could improve this.
+:::{.callout-tip}
+## Notice: 
+In the second example we generate a dot instead of a scatter plot. This type of plot is useful if we have a low number of observations and want to show the reader all data. While we could also just plot the mean and standard errors, plotting all data points can be more informative as it can give a general idea about the spread of the data.  
+
+At the moment the plot is not ideal since points are on top of each other but we later learn how we could improve this.
+:::
 
 </details>
 
 
 ## Saving plots as variables
 
-Plots can be saved as variables and we can add more layers to these variables using the `+` operator. This is really useful if you want to make multiple related plots from a common base, i.e. we could store a common theme in one variable and reuse it for different plot types. Below we start:
+Plots can be saved as variables and we can add more layers to these variables using the `+` operator. This is really useful if you want to make multiple related plots from a common base, i.e. we could store a common theme in one variable and reuse it for different plot types. 
+
+For example, we could save the mappings when using the `ggplot()` function as a variable called `plt_pengs` and then use this variable whenever we want to add new layers:
 
 ```{r}
 #save our first layer in the plt_pengs variable
-plt_pengs <- ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g))
+plt_pengs <- ggplot(penguins_clean, aes(species, flipper_length_mm))
 
 #add the second layer to plt_pengs to generate a scatter plot
 plt_pengs +
   geom_point()
 ```
 
-
-## Using more than one data set
-
-We can use different data frames on each layer. To generate an example, lets fit a model on our data (without going into the details) and also plot it on top of our points:
+In this way, we can easily change how the plot looks, i.e. instead of a dot plot, we can have a boxplot (more about boxplots later):
 
 ```{r}
-#create linear model
-mod <- lm(flipper_length_mm ~ body_mass_g, data = penguins_clean)
-
-#create a dataframe of 200 body mass values
-grid <- data_frame(body_mass_g = seq(min(penguins_clean$body_mass_g), max(penguins_clean$body_mass_g), length = 200))
-
-#predict the flipper length based on our model and our dataframe
-grid$flipper_length_mm <- predict(mod, newdata = grid)
+plt_pengs +
+  geom_boxplot()
 ```
 
+
+
+## Saving plots to your computer
+
+How would we save this plot to our computer?
+
+:::{.callout-important}
+When saving images it is generally better to save a plot as vector file, such as svg, ai, pdf (in most of the cases), instead of raster files such as png or tiff. Vector files use paths of points and lines to create an image while raster graphics are created using pixels.
+
+Using vector images allows us to modify every line or dot in a plot using tools such as Illustrator or Inkscape and thereby customize plots outside of R.
+:::
+
+
+### Using the export function in RStudio
+
+In Rstudio, we can use the export function in the files panel. In the File panel navigate to the plot tab. You can export a figure if its shown in the panel by clicking on export decide how you want to save your image.
+
+
+### Using the pdf function
+
+The  `plot()` function takes as argument file name and if needed the directory we want to save our file in. We can add additional arguments such as the width or height of our plot or even the target paper size. 
+
+```{r}
+#| eval: false
+
+#call the pdf command to tell R we want to generate a plot
+pdf(file = "../images/ExamplePlot_BaseR.pdf", paper = "a4") 
+
+#create a plot
+ggplot(penguins_clean, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point()
+
+# Run dev.off() to create the file
+dev.off()
+```
+### Using ggsave
+
+The `ggsave` function is part of the ggplot package and can be used for any plot generated with ggplot. Whenever you use other libraries to generate plots or extend ggplot it might be better to save plots using `pdf()` or via the files pane. .
+
+```{r}
+#| eval: false
+
+#create a plot and store it in a variable
+my_plot <- 
+ggplot(penguins_clean, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point()
+
+ggsave("../images/ExamplePlot_GGplot.pdf", my_plot, width = 21, height = 30, unit = "cm")
+
+```
+
+:::{.callout-tip}
+## Notice: 
+If you run the code on your own and compare the two plots generated with `pdf()` and `ggsave`, you will see the plots have different margins despite both being set to A4. Therefore, it is often useful to play with the width and height a bit to get things right.
+:::
+
+
+
+
+## Addon: Plotting more than one data set
+
+We can plot different data frames on each layer. To generate an example, lets fit a model on our data and also plot it on top of our points. While going into how to fit models is out of the scope of this tutorial, free free to look at the links below if you want to go deeper:
+
+- [Intro to linear regression](https://www.statology.org/linear-regression/)
+- Some examples for the [modelbase package](https://easystats.github.io/modelbased/articles/estimate_response.html)
+
+:::{.callout-tip}
+## Notice: 
+If you want to follow examples in **Addon** sections, make sure you have any additional libraries installed before running the code.
+:::
+
+```{r}
+#load some libraries
+library(modelbased)
+
+#create linear model and predict data
+mod <- lm(flipper_length_mm ~ body_mass_g , data = penguins_clean)
+pred_data <- estimate_expectation(mod)
+
+#add the original data to our df
+pred_data$flipper_length_mm <- penguins_clean$flipper_length_mm
+head(pred_data)
+```
 Now, we can add our predictions as a line to our first scatter plot by adding an additional layer in which we provide our second dataset:
 
 ```{r}
-ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
+ggplot(penguins_clean, aes(x = flipper_length_mm, y=  body_mass_g)) +
   geom_point() +
-  geom_line(data = grid)
+  geom_line(data = pred_data, aes(x = Predicted, y = body_mass_g ))
 ```
 
 You can easily use this approach to add layers to your plot for summary statistics, labels for outliers, etc.
@@ -309,7 +403,7 @@ ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g, shape = species)) +
   geom_point()
 ```
 
-Notice, since we can only add a shape to categorical data we would get an error if we want to add shapes for the different years (which, if we remember the output from `str(penguins)` are stored as integers). If we wanted to add shapes for different years, we first would have to convert the year to a factor.
+We can only add a shape to categorical data and we would get an error if we want to add shapes for the different years (which, if we remember the output from `str(penguins)` are stored as integers). If we wanted to add shapes for different years, we first would have to convert the year to a factor.
 
 Feel free to try this without changing the year to a factor first.
 
@@ -341,34 +435,37 @@ ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
 
 **Exercises**
 
-1. Make a scatterplot to compare bill length and bill depth. Change the color for the islands. Also change the size attribute to make the symbols bigger and make the dots more transparent (it is up to you what values you choose).
-2. Make a scatterplot to compare bill length and bill depth and use different colors for different islands. In the point layer, change the shape attribute to 21.
-3. Do the same as in exercise 2 but instead of mapping the islands to the colors map them to the fill aesthetic instead. Do you understand what is happening?
+1. Make a scatterplot to compare bill length and bill depth and use different colors for different islands. In the point layer, change the shape attribute to 21.
+2. Do the same as in exercise 1 but instead of mapping the islands to the colors map them to the fill aesthetic instead. Do you understand what is happening?
+3. Make a scatterplot to compare bill length and bill depth. Map the color aesthethic to the island variable. Also change the size attribute to make the symbols bigger and make the dots more transparent (it is up to you what values you choose).
 
 <details>
     <summary>Click me to see an answer</summary>
 
 ```{r}
 #question 1
-ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g, shape = sex, color = island)) +
-  geom_point(size = 2, alpha = 0.5)
-```
-
-```{r}
-#question 2
 ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g,  color = island)) +
   geom_point(shape = 21)
 ```
 
 ```{r}
-#question 3
+#question 2
 ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g,  fill = island)) +
   geom_point(shape = 21)
 ```
 
-Comment on using fill versus color:  
-
+:::{.callout-tip}
+## Notice: 
 Fill controls how a shape is filled and color controls the color of the outline/border. The default points that are used with `geom_point` behave a bit differently when using the default shape 19 since this shape does not have an outline while shape 21 has one.
+:::
+
+
+```{r}
+#question 3
+ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g, shape = sex, color = island)) +
+  geom_point(size = 2, alpha = 0.5)
+```
+
 
 </details>
 
@@ -451,9 +548,9 @@ Classical barplots have a categorical x-axis and we can generate barplots using 
 - `geom_col()`: plots the actual values
 
 
-#### Geom_bar and geom_col
+#### Geom_bar
 
-Let's first count the number of observations we have for each penguin species.
+Let's first plot the number of observations we have for each penguin species. Here, `geom_bar()` does the work for us and does the counting:
 
 ```{r}
 ggplot(penguins_clean, aes(species)) +
@@ -476,21 +573,27 @@ peng_summary<- penguins_clean |>
 peng_summary
 ```
 
-Now, lets plot the observations. You will notice that compared to the first time we used `geom_bar()` we added `stat = "identity"` to our geom. 
-
-A statistical transformation, or stat, transforms the data, typically by summarizing it in some manner. Geom_bar by default uses `stat = "count"` to automatically count the number of observations without us having to write this out. If we instead want to provide already existing values to geom_bar instead of letting it automatically count for us, we have to change this argument to `stat = "identity"`:
+Now, lets plot the observations:
 
 ```{r}
 ggplot(peng_summary, aes(x = species, y = observations)) +
   geom_bar(stat = "identity")
 ```
 
-Alternatively, we could use `geom_col`. `geom_col()` won't try to aggregate the data by default and it expects us to already have the y values calculated and uses these values directly.  
+Notice how we added `stat = "identity"` to our geom in the example above? 
+
+A statistical transformation, or stat, transforms the data, typically by summarizing it in some manner. Geom_bar by default uses `stat = "count"` to automatically count the number of observations without us having to write this out. If we instead want to provide already existing values to geom_bar instead of letting `geom_point` automatically count for us, we have to change this argument to `stat = "identity"`.
+
+
+#### Geom_col
+
+Instead of using `geom_bar` we can use `geom_col`. `geom_col()` won't try to aggregate the data by default and it expects us to already have the y values calculated and uses these values directly.  
 
 ```{r}
 ggplot(peng_summary, aes(x = species, y = observations)) +
   geom_col()
 ```
+
 
 #### Addon: Ordering data in barplots
 
