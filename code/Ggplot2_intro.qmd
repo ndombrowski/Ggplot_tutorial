@@ -37,7 +37,7 @@ knitr::opts_chunk$set(eval=TRUE, cache=FALSE, message=FALSE, warning=FALSE,
 
 This tutorial will introduce the basics of plotting with ggplot.
 
-Visualizing data is important not only for publishing but also to explore our data. For example, imagine that we do a regression analysis and we get the result two variables (i.e. weight and income) are positively correlated. While this might be an exciting result, without visualizing the data we might miss issues with outliers or don't see that are data points are not distributed normally. That is why plotting the data is so important. For example in the plot below, we have the exact same regression line but the data points behave very differently.
+Visualizing data is important not only for publishing but also to explore our data. For example, imagine that we do a regression analysis and we get the result that two variables (i.e. height and income) are positively correlated. While this might be an exciting result, without visualizing the data we might not realize that we have outliers or that data points are not distributed normally. That is why plotting the data is so important. For example in the plot below, we have the exact same regression line but the data points behave very differently.
 
 ![](C:/Users/ndmic/WorkingDir/Notebooks/Pictures/ggplot1.png){width=50% fig-align="left"}
 
@@ -66,10 +66,10 @@ If you don't have the palmerpenguins data set and the tidyverse installed yet th
 install.packages("palmerpenguins")
 install.packages("tidyverse")
 ```
+Once you have everything installed you load the libraries like this:
 
 ```{r}
-#load packages
-library(tidyverse)      #tools for transforming data
+library(tidyverse)
 library(palmerpenguins)
 ```
 
@@ -81,10 +81,9 @@ During this tutorial we will work with two datasets:
 - the palmerpenguins dataset, a data set that records details of 344 penguins. This will be the main data set we will explore.
 - The beaver dataset, a time series recording the temperature and activity of two beavers. This dataset is part of base R and doesn't need to be installed. Time-series are best represented in line plots and we will explore this data when talking about these types of plots.
 
-Let's have a first look at the penguin dataset and let us first have a look at the first few rows:
+Let's have a first look at the penguin dataset by looking at the first few rows:
 
 ```{r}
-#get a first look at the penguin dataset
 head(penguins)
 ```
 
@@ -93,7 +92,7 @@ head(penguins)
 If you are viewing the HTML version, you can see all columns of the table above by clicking on the little arrow on the top, right corner of the table. 
 :::
 
-We see that we have 8 column of data, with different categorical data (species, sex and island) as well as different numerical measurements.
+We see that we have 8 columns of data. The columns contain categorical data (species, sex and island) as well as numerical data (flipper_length_mm, body_mass_g, year).
 
 Next, let's explore the data structure (`str` let's us know if our columns are factors, integers or numbers):
 
@@ -105,39 +104,42 @@ str(penguins)
 Some key features we can take from this:
 
 - The total amount of data we work with, i.e. 344 rows and 8 columns of data 
-- Te names and content of all 8, i.e. species, bill_length and sex
-- The type of data we have for each columns, i.e. factors, numeric/integer, character
+- Te names and content of all 8 columns, i.e. species, bill_length and sex
+- The type of data we have for each column, i.e. factors, numeric/integer, character
 - The unique levels for some variables, i.e. we compare 3 different penguin species
-- If we look closely, we can see whether or not we have to worry about NAs (i.e. missing data). For example, we see an NA in the sex column.
+- If we look closely, we can see whether or not we have to worry about NAs (i.e. missing data). For example, we see an NA in the sex column
 
-Finally, let's calculate a basic summary of our data:
+Finally, let's calculate a basic summary of our data using the `summary()` function:
 
 ```{r}
 summary(penguins)
 ```
 
-After our first data exploration steps, we can see that we have eight columns with different variables, such as species, bill length or year. For each data column we got a summary of the number of observations (for factor data) as well as basic statistics for all numerical data. Another useful piece of information we get is the number of missing values for each column. 
+After our first data exploration steps, we can see that we have 344 rows and eight columns of data. The columns contain types of categorical or numerical data, such as species, bill length or year. For each data column we got a summary of the number of observations (for factor data) as well as basic statistics for all numerical data. Another useful piece of information we get is the number of missing values for each column. 
 
-Since we can see that the penguin dataset has rows with missing data (i.e. NA), our first task is to remove any row with missing data:
+Since we noticed that the penguin dataset has rows with missing data (i.e. NA), our first task is to remove any row with missing data:
 
 ```{r}
 #discard rows with NAs
 penguins_clean <-
   penguins |> 
   drop_na()
-
-#sanity check to control whether 11 rows were dropped
-#print the dimensions for our original dataset
-print(dim(penguins))
-
-#print the dimensions for our cleaned dataset
-print(dim(penguins_clean))
 ```
 
 :::{.callout-important}
 If you are working in base R you might have an error when using `|>` if you are working with an R version below 4.1. If you get an error and can't update or don't want to update R use `%>%` instead. For this to work, you need to have the tidyverse library loaded.
 :::
 
+Before proceeding, lets first check how many rows of data we removed:
+
+```{r}
+#sanity check to control how many rows were dropped
+#print the dimensions for our original dataset
+print(dim(penguins))
+
+#print the dimensions for our cleaned dataset
+print(dim(penguins_clean))
+```
 
 :::{.callout-note}
 Sanity checks are an important step when manipulating data and we recommend to always do them.
@@ -220,7 +222,7 @@ plt_pengs +
   geom_point()
 ```
 
-In this way, we can easily change how the plot looks, i.e. instead of a dot plot, we can have a boxplot (more about boxplots later):
+In this way, we can easily change how the plot looks, i.e. instead of a dot plot, we can have a boxplot (more about boxplots later) while not having to retype the mappings but just use our variable instead:
 
 ```{r}
 plt_pengs +
@@ -247,7 +249,7 @@ In Rstudio, we can use the export function in the files panel. In the File panel
 
 ### Using the pdf function
 
-The  `plot()` function takes as argument file name and if needed the directory we want to save our file in. We can add additional arguments such as the width or height of our plot or even the target paper size. 
+The  `plot()` function takes as argument file name and if needed the directory we want to save our file in (in the case below the images folder found on the same level of code directory). We can add additional arguments such as the width or height of our plot or even the target paper size. 
 
 ```{r}
 #| eval: false
@@ -284,11 +286,51 @@ If you run the code on your own and compare the two plots generated with `pdf()`
 :::
 
 
+**Exercise**
+
+1. Plot the bill_length_mm against the bill_depth_mm and save the plot as pdf using `pdf()` using default settings.
+2. Plot the bill_length_mm against the bill_depth_mm and save the plot as pdf using `ggsave()` using default settings.
+3. Do the plots look the same?
+
+<details>
+    <summary>Click me to see an answer</summary>
+
+**Question 1**
+
+```{r}
+#| eval: false
+
+pdf(file = "image1.pdf") 
+
+ggplot(penguins_clean, aes(x = bill_length_mm, y = bill_depth_mm )) +
+  geom_point()
+
+dev.off()
+```
+
+**Question 2**
+
+```{r}
+#| eval: false
+ggplot(penguins_clean, aes(x = bill_length_mm, y = bill_depth_mm )) +
+  geom_point()
+
+ggsave("image2.pdf")
+```
+
+**Question 3**
+
+The plots might look slightly different as pdf by default uses 7 points for width and height and ggsave uses the size of the current graphics device (i.e. how you see the plot displayed in the plots panel in RStudio). That is why choosing alternative values for the dimensions gives you a bit more control how the plot looks.
+
+</details>
+
 
 
 ## Addon: Plotting more than one data set
 
-We can plot different data frames on each layer. To generate an example, lets fit a model on our data and also plot it on top of our points. While going into how to fit models is out of the scope of this tutorial, free free to look at the links below if you want to go deeper:
+We can plot different data frames on each layer. To generate an example, lets fit a model on our data, use it to predict some data and plot the results as a regression line on top of our individual data points. 
+
+While going into how to fit models is out of the scope of this tutorial, free free to look at the links below if you want to go deeper:
 
 - [Intro to linear regression](https://www.statology.org/linear-regression/)
 - Some examples for the [modelbase package](https://easystats.github.io/modelbased/articles/estimate_response.html)
@@ -308,9 +350,12 @@ pred_data <- estimate_expectation(mod)
 
 #add the original data to our df
 pred_data$flipper_length_mm <- penguins_clean$flipper_length_mm
+
+#lets look at our predictions
 head(pred_data)
 ```
-Now, we can add our predictions as a line to our first scatter plot by adding an additional layer in which we provide our second dataset:
+
+Now, we can add our predictions as a line to our scatter plot by adding an additional layer in which we provide our second dataset with the predicted values:
 
 ```{r}
 ggplot(penguins_clean, aes(x = flipper_length_mm, y=  body_mass_g)) +
@@ -362,12 +407,13 @@ For example, we can also map species to color inside the geom_point layer:
 ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
   geom_point(aes(color = species))
 ```
+
 An example for when it can be useful to control the color in individual layers is shown in a later point in the tutorial but if you want to have a quick look go to @sec-playing-with-facets. 
 
 
 **Exercise**
 
-Make a scatterplot comparing the flipper and bill lengths and assign the islands to different colors. It is up to you where you assign the color aesthethic and feel free to try both options.
+Make a scatterplot comparing the flipper and bill lengths and assign the islands to different colors. It is up to you where in what layer you assign the color aesthetic and feel free to try both options.
 
 <details>
     <summary>Click me to see an answer</summary>
