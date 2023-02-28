@@ -56,12 +56,12 @@ If you are opening the notebook version (i.e. the qmd file) of this tutorial, yo
 
 If you want to follow this tutorial, then you need to install some tools first. Specifically, we need to download the data set that we will explore today as well as the tidyverse library (which includes several packages such as dplyr for data transformation or ggplot, our plotting library). 
 
-If you don't have the palmerpenguins data set and the tidyverse installed yet then you can type the following into your R notebook or console:
+If you don't have the palmerpenguins data set and the tidyverse installed yet then you can type the following into your R notebook or console. You only need to run this kind of code once.
 
 ```{r}
 #| eval: false
 
-#install required data package and libraries(you only need to do this once)
+#install required data package and libraries
 #the second install might take a bit
 install.packages("palmerpenguins")
 install.packages("tidyverse")
@@ -81,20 +81,22 @@ During this tutorial we will work with two datasets:
 - the palmerpenguins dataset, a data set that records details of 344 penguins. This will be the main data set we will explore.
 - The beaver dataset, a time series recording the temperature and activity of two beavers. This dataset is part of base R and doesn't need to be installed. Time-series are best represented in line plots and we will explore this data when talking about these types of plots.
 
-Let's have a first look at the penguin dataset by looking at the first few rows:
-
-```{r}
-head(penguins)
-```
+Let's have a first look at the penguin dataset by looking at the first few rows using the `head()` function.
 
 :::{.callout-tip}
 ## Notice: 
 If you are viewing the HTML version, you can see all columns of the table above by clicking on the little arrow on the top, right corner of the table. 
 :::
 
+```{r}
+head(penguins)
+```
+
+
+
 We see that we have 8 columns of data. The columns contain categorical data (species, sex and island) as well as numerical data (flipper_length_mm, body_mass_g, year).
 
-Next, let's explore the data structure (`str` let's us know if our columns are factors, integers or numbers):
+Next, let's explore the data structure (`str` let's us know if our columns are factors, integers or numbers). 
 
 ```{r}
 #view the data structure of the penguin data
@@ -109,18 +111,18 @@ Some key features we can take from this:
 - The unique levels for some variables, i.e. we compare 3 different penguin species
 - If we look closely, we can see whether or not we have to worry about NAs (i.e. missing data). For example, we see an NA in the sex column
 
-Finally, let's calculate a basic summary of our data using the `summary()` function:
+Finally, let's calculate a basic summary statistics of our data using the `summary()` function:
 
 ```{r}
 summary(penguins)
 ```
 
-After our first data exploration steps, we can see that we have 344 rows and eight columns of data. The columns contain types of categorical or numerical data, such as species, bill length or year. For each data column we got a summary of the number of observations (for factor data) as well as basic statistics for all numerical data. Another useful piece of information we get is the number of missing values for each column. 
+After our first data exploration steps, we can see that we have 344 rows and eight columns of data. The columns contain types of categorical or numerical data, such as species, bill length or year. We know how many unique observations we have for categorical data, i.e. we look at three species of penguins. Additionally, for each data column we got a summary of the number of observations (for factor data) as well as basic statistics for all numerical data. Another useful piece of information we get is the number of missing values for each column. 
 
 Since we noticed that the penguin dataset has rows with missing data (i.e. NA), our first task is to remove any row with missing data:
 
 ```{r}
-#discard rows with NAs
+#discard rows with NAs and store the resulting dataframe in a new variable
 penguins_clean <-
   penguins |> 
   drop_na()
@@ -152,9 +154,9 @@ In the example above, we check the number of dimension of our data frame before 
 
 Now we can start to generate our first plot. Let's start with a scatterplot. In the code below we:
 
-1. Initialize the plot using the `ggpplot`function in the first line of code. We provide the input dataframe (i.e. penguins_clean) and we also  
+1. Initialize the plot using the `ggpplot()`function in the first line of code. Inside the function, we provide the input dataframe (i.e. penguins_clean) and we also  
 2. map variables (i.e. flipper_length_mm and body_mass_g) to the aes(thetics) in our graph. More specifically, we define what we want to plot on the x- and/or y-axes.
-3. Define e how we want to plot our data in the second line of code. In the example we generate a scatterplot via ``geom_point()``. When using the `+` symbol after the first ggplot call, we add a **layer** to our plot. We can add as many layers to our plot as we want, more on that later.
+3. Define how we want to plot our data in the second line of code. For example, we specify that we want to generate a scatterplot via ``geom_point()``. When using the `+` symbol after the first ggplot call, we add a **layer** to our plot. We can add as many layers to our plot as we want, more on that later.
 
 
 ```{r}
@@ -162,7 +164,7 @@ ggplot(penguins_clean, aes(x = flipper_length_mm, y = body_mass_g)) +
   geom_point()
 ```
 
-By default, ggplot expects the first aesthetic to be the x and the second to be the y variable. We could also write the code a bit shorter and still get the exact same result as shown below:
+By default, ggplot expects the first aesthetic to be mapped to the x and the second aesthetic to the mapped to the y variable. We could also write the code a bit shorter and still get the exact same result as shown below:
 
 ```{r}
 ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
@@ -199,7 +201,7 @@ ggplot(penguins_clean, aes(x = species, y = body_mass_g)) +
 
 :::{.callout-tip}
 ## Notice: 
-In the second example we generate a dot instead of a scatter plot. This type of plot is useful if we have a low number of observations and want to show the reader all data. While we could also just plot the mean and standard errors, plotting all data points can be more informative as it can give a general idea about the spread of the data.  
+In the second example we generate a dot instead of a scatter plot. This type of plot is useful if we have a low number of observations and want to show the reader all the data. While we could also just plot the mean and standard errors, plotting all data points can be more informative as it can give a general idea about the spread of the data and the presence of any outliers.  
 
 At the moment the plot is not ideal since points are on top of each other but we later learn how we could improve this.
 :::
@@ -222,7 +224,7 @@ plt_pengs +
   geom_point()
 ```
 
-In this way, we can easily change how the plot looks, i.e. instead of a dot plot, we can have a boxplot (more about boxplots later) while not having to retype the mappings but just use our variable instead:
+By storing our mappings in a variable, we can easily change how the plot looks. For example, instead of generating a dot plot let us generate a boxplot (more about boxplots later). Notice, how we don't have to retype the mappings but just use our variable instead:
 
 ```{r}
 plt_pengs +
@@ -246,10 +248,12 @@ Using vector images allows us to modify every line or dot in a plot using tools 
 
 In Rstudio, we can use the export function in the files panel. In the File panel navigate to the plot tab. You can export a figure if its shown in the panel by clicking on export decide how you want to save your image.
 
+![](../images/saving_images.png){width=100% fig-align="left"}
+
 
 ### Using the pdf function
 
-The  `plot()` function takes as argument file name and if needed the directory we want to save our file in (in the case below the images folder found on the same level of code directory). We can add additional arguments such as the width or height of our plot or even the target paper size. 
+The  `pdf()` function takes as argument file name and if needed the directory we want to save our file in (in the case below the images folder found on the same level as the code directory). We can add additional arguments such as the width or height of our plot or even the target paper size. 
 
 ```{r}
 #| eval: false
@@ -266,7 +270,7 @@ dev.off()
 ```
 ### Using ggsave
 
-The `ggsave` function is part of the ggplot package and can be used for any plot generated with ggplot. Whenever you use other libraries to generate plots or extend ggplot it might be better to save plots using `pdf()` or via the files pane. .
+The `ggsave` function is part of the ggplot package and can be used to save any plot generated with ggplot. Whenever you use other libraries to generate plots or extend ggplot it might be better to save plots using `pdf()` or via the files pane. .
 
 ```{r}
 #| eval: false
@@ -320,7 +324,7 @@ ggsave("image2.pdf")
 
 **Question 3**
 
-The plots might look slightly different as pdf by default uses 7 points for width and height and ggsave uses the size of the current graphics device (i.e. how you see the plot displayed in the plots panel in RStudio). That is why choosing alternative values for the dimensions gives you a bit more control how the plot looks.
+The plots might look slightly different as pdf by default uses 7 points for width and height and ggsave uses the size of the current graphics device (i.e. how you see the plot displayed in the plots panel in RStudio). That is why choosing alternative values for the dimensions gives you a bit more control over how the plot looks.
 
 </details>
 
@@ -413,7 +417,7 @@ An example for when it can be useful to control the color in individual layers i
 
 **Exercise**
 
-Make a scatterplot comparing the flipper and bill lengths and assign the islands to different colors. It is up to you where in what layer you assign the color aesthetic and feel free to try both options.
+Make a scatterplot comparing the flipper and bill lengths and assign the islands to different colors by changing the color aesthetic. It is up to you in what layer you assign the color aesthetic and feel free to try both options.
 
 <details>
     <summary>Click me to see an answer</summary>
