@@ -1473,20 +1473,33 @@ ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = spe
 
 With `scale_color_manual()` we can change the properties of the color scale . The first argument sets the legend title and for  the values argument we provide a named vector of colors to use.
 
+Below we use simple words, i.e. red and blue, to describe what colors we want to use. However, its recommended to use a [hexcode](https://www.w3schools.com/colors/colors_hexadecimal.asp) instead to have a bit more control over our color scheme. For example #377EB8 would also give a blue color (and in newer RStudio versions, the hexcode gets highlighted by the color the ID represents).
+
+Let us start by defining some vectors in which we define the colors we want to map our three species too:
+
+1. palette1 in which we are explicit about what species is mapped to what color
+2. palette2 in which we only create a vector with three written out colors
+3. palette3 in which we create a vector with colors using a hexcode
+
 ```{r}
 #lets start by defining some color vectors
-palette <- c(Gentoo = "#377EB8", Chinstrap = "#E41A1C", Adelie = "purple")
-palette2 <- c("#377EB8",  "#E41A1C", "purple")
+palette1 <- c(Gentoo = "#377EB8", Chinstrap = "#E41A1C", Adelie = "purple")
+palette2 <- c("blue",  "red", "purple")
+palette3 <- c("#377EB8",  "#E41A1C", "#B300B2")
+```
 
+Now, let us use `scale_color_manual` to assign our species to these colors:
+
+```{r}
 ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
   geom_point(position = "jitter") +
-  scale_color_manual("Penguins", values = palette)
+  scale_color_manual("Penguins", values = palette1)
 ```
 
 
 **Exercise**
 
-As an exercise, use palette2 instead of palette and see what happens.
+Use palette2 and palette3 instead of palette1. Do you see how they behave differently?
 
 <details>
     <summary>Click me to see an answer</summary>
@@ -1497,7 +1510,21 @@ ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = spe
   scale_color_manual("Penguins", values = palette2)
 ```
 
-We can see that if we don't add the names to the color vector, we have less control over how colors are changed.
+We can see that if we don't add the species names to the vector, we have less control over how colors are changed. If we don't specify an order, the colors get assigned to the default order of the mapped variable, i.e. species: 
+
+- Adelie: blue
+- Chinstrap: red
+- Gentoo: purple
+
+In contrast, using palette1 we can be explicit and decide that Adelie is purple regardless of the order of the vector.
+
+```{r}
+ggplot(penguins_clean, aes( x =flipper_length_mm , y = body_mass_g , color = species)) +
+  geom_point(position = "jitter") +
+  scale_color_manual("Penguins", values = palette3)
+```
+
+Palette3 is an example of us using hexcodes. See how we use blue, red and purple as before but by using the hexcode we can exactly specify the intensity of the colors. In the example here, I decide to use a less bright color intensity compared to when we used the other palettes.
 
 </details>
 
@@ -1505,7 +1532,7 @@ We can see that if we don't add the names to the color vector, we have less cont
 When making your own color palettes you need to keep in mind:
 
 1. You need as many colors as you have categories (3 in our case)
-2. Depending on how you assign the colors, you might not have control over the order of the colors and need to watch out that the colors get assigned to the right species. 
+2. Depending on how you assign the colors, you might not have control over the order of the colors and need to watch out that the colors get assigned to the right variable, i.e. species in the examples above. 
 
 
 
