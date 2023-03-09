@@ -7,6 +7,7 @@ execute:
 fig-width: 400
 format:
   html:
+    number-sections: true
     fig-width: 5
     fig-height: 4
     embed-resources: true
@@ -15,7 +16,7 @@ format:
     toc-location: left
     toc-depth: 4
     link-external-newwindow: true
-    #output-file: index.html
+    output-file: index.html
 theme:
   light: cosmo
   dark: darkly
@@ -268,6 +269,7 @@ ggplot(penguins_clean, aes(x = flipper_length_mm, y = body_mass_g)) +
 # Run dev.off() to create the file
 dev.off()
 ```
+
 ### Using ggsave
 
 The `ggsave` function is part of the ggplot package and can be used to save any plot generated with ggplot. Whenever you use other libraries to generate plots or extend ggplot it might be better to save plots using `pdf()` or via the files pane. .
@@ -487,20 +489,20 @@ ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g)) +
 
 1. Make a scatterplot to compare bill length and bill depth and use different colors for different islands. In the point layer, change the shape attribute to 21.
 2. Do the same as in exercise 1 but instead of mapping the islands to the colors map them to the fill aesthetic instead. Do you understand what is happening?
-3. Make a scatterplot to compare bill length and bill depth. Map the color aesthethic to the island variable. Also change the size attribute to make the symbols bigger and make the dots more transparent (it is up to you what values you choose).
+3. Make a scatterplot to compare bill length and bill depth. Map the shape aesthethic to the island variable. Also change the size attribute to make the symbols bigger and make the dots more transparent (it is up to you what values you choose).
 
 <details>
     <summary>Click me to see an answer</summary>
 
 ```{r}
 #question 1
-ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g,  color = island)) +
+ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm,  color = island)) +
   geom_point(shape = 21)
 ```
 
 ```{r}
 #question 2
-ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g,  fill = island)) +
+ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm,  fill = island)) +
   geom_point(shape = 21)
 ```
 
@@ -512,7 +514,7 @@ Fill controls how a shape is filled and color controls the color of the outline/
 
 ```{r}
 #question 3
-ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g, shape = sex, color = island)) +
+ggplot(penguins_clean, aes(bill_length_mm, bill_depth_mm, shape = island)) +
   geom_point(size = 2, alpha = 0.5)
 ```
 
@@ -1897,6 +1899,78 @@ ggplot(penguins_clean, aes( x = bill_length_mm, y = body_mass_g, color = species
 ## Playground
 
 The code below is outside of the tutorial but will list any other package that is can be useful to use in combination with ggplot.
+
+
+### Cowplot
+
+[cowplot](https://cran.r-project.org/web/packages/cowplot/vignettes/introduction.html#:~:text=The%20cowplot%20package%20is%20a,or%20mix%20plots%20with%20images.) provides various features that help with creating publication-quality figures, such as a set of themes, functions to align plots and arrange them into complex compound figures, and functions that make it easy to annotate plots and or mix plots with images.
+
+
+```{r}
+#load library
+library(cowplot)
+```
+
+Let us start by creating some plots first:
+
+```{r}
+hist <- ggplot(penguins_clean, aes( x = flipper_length_mm, color = species )) +
+  geom_histogram() 
+
+box <- ggplot(penguins_clean, aes(x = species, y = body_mass_g, color = species)) +
+  geom_boxplot() + 
+  geom_point(position = position_jitter())
+
+scatter <- ggplot(penguins_clean, aes(flipper_length_mm, body_mass_g, color = species)) +
+  geom_point()
+```
+
+
+#### Cowplot themes
+
+Cowplot comes with some build-in themes that can be used to beautify the plot:
+
+```{r}
+scatter +
+  theme_cowplot(12)
+```
+
+
+#### Arranging multiple plots
+
+With the `plot_grid` function, we can arrange multiple plots in a grid:
+
+```{r}
+#| fig-width: 10
+plot_grid(scatter, box, labels = c("A", "B"), label_size = 12)
+```
+
+We see that we have redundant legend, we can deal with this as follows:
+
+```{r}
+#| fig-width: 10
+
+# extract a legend 
+legend <- get_legend(scatter +
+                       theme(legend.direction = "vertical",
+                             legend.justification="top", 
+                             legend.box.just = "top")
+                     )
+
+#add legend to the plot
+p <-plot_grid(
+  scatter + theme(legend.position="none"), 
+  box  + theme(legend.position="none"),
+  legend,
+  nrow = 1,
+  rel_widths = c(1,1,0.3),
+  labels = c("A", "B", ""), 
+  label_size = 12)
+
+p
+```
+
+
 
 ### GGPP
 
