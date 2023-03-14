@@ -1972,6 +1972,87 @@ p
 
 
 
+### ggstatsplot
+
+`ggstatsplot` is an extension of `ggplot2` package for creating graphics with details from statistical tests included in the information-rich plots themselves. More information can be found [here](https://indrajeetpatil.github.io/ggstatsplot/).
+
+```{r}
+library(ggstatsplot)
+```
+
+There are different types of plot, for example, we can use violin plots	for comparisons between groups/conditions. The following options are available:
+
+|Function|Plot|Description|
+|:----|:----|:----|
+|ggbetweenstats()|violin plots|for comparisons between groups/conditions|
+|ggwithinstats()|violin plots|for comparisons within groups/conditions|
+|gghistostats()|histograms|for distribution about numeric variable|
+|ggdotplotstats()|dot plots/charts|for distribution about labeled numeric variable|
+|ggscatterstats()|scatterplots|for correlation between two variables|
+|ggcorrmat()|correlation matrices|for correlations between multiple variables|
+|ggpiestats()|pie charts|for categorical data|
+|ggbarstats()|bar charts|for categorical data|
+|ggcoefstats()|dot-and-whisker plots|for regression models and meta-analysis|
+
+
+We can also use different statistical approaches: 
+
+|Type|Test|Function used|
+|:----|:----|:----|
+|Parametric|One-sample Student's t-test|stats::t.test()|
+|Non-parametric|One-sample Wilcoxon test|stats::wilcox.test()|
+|Robust|Bootstrap-t method for one-sample test|WRS2::trimcibt()|
+|Bayesian|One-sample Student's t-test|BayesFactor::ttestBF()|
+
+
+An example for a scatterplot:
+
+```{r}
+ggscatterstats(data = penguins_clean, x = bill_length_mm, y = body_mass_g)
+```
+
+
+
+A simple example for a  violinplot:
+
+```{r}
+ggbetweenstats(data = penguins, x = species, y = body_mass_g,  type = "robust")
+```
+
+gghistostats()	histograms	for distribution about numeric variable:
+
+
+```{r}
+gghistostats(data = penguins, x = body_mass_g,  type = "np",
+             normal.curve = TRUE, normal.curve.args = list(color = "black", size = 1))
+```
+
+We can also extract the stats like this:
+
+```{r}
+p <- gghistostats(data = penguins, x = body_mass_g,  type = "np")
+
+extract_stats(p)
+```
+We can also do a grouped comparison, i.e. lets compare the body mass of different species grouped by sex. Since we do several comparisons, lets also a bonferroni correction here:
+
+```{r}
+grouped_ggbetweenstats(data = penguins_clean, x = species, y= body_mass_g,  grouping.var = sex,
+                       p.adjust.method  = "bonferroni", centrality.type = "parametric")
+```
+We can also use this tool to tag outliers:
+
+```{r}
+ggbetweenstats(data = penguins, x = species, y = body_mass_g,  outlier.tagging = TRUE, outlier.color = "pink")
+```
+Finally, we can also generate a correlalogram (a matrix of correlation coefficients):
+
+```{r}
+ggcorrmat(data = penguins_clean)
+```
+
+
+
 ### GGPP
 
 [ggpp](https://docs.r4photobiology.info/ggpp/articles/grammar-extensions.html#geom_plot) is a relatively new package that allows us to further modify plots using tibbles:
