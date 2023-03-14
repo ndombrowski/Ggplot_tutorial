@@ -2,3 +2,5 @@ ExampleData/
 *.DS_Store
 *.Rhistory
 code/.Rhistory
+
+!ExampleData/penguins.csv
